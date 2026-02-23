@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: ai-web-generator-backend
+server:
+  port: 8123
+  servlet:
+    context-path: /api
+# springdoc-openapi
+springdoc:
+  group-configs:
+    - group: 'default'
+      packages-to-scan: com.book.aiwebgenerator.controller
+# knife4j
+knife4j:
+  enable: true
+  setting:
+    language: en

@@ -17,48 +17,95 @@
           @click="handleMenuClick"
         />
       </a-col>
-      <a-col>
-        <div class="user-login-status">
-          <a-button type="primary">Login</a-button>
-        </div>
-      </a-col>
+      <div v-if="loginUserStore.loginUser.id">
+        <a-dropdown>
+          <a-space>
+            <a-avatar :src="loginUserStore.loginUser.userAvatar" />
+            {{ loginUserStore.loginUser.userName ?? "User" }}
+          </a-space>
+          <template #overlay>
+            <a-menu>
+              <a-menu-item @click="doLogout">
+                <LogoutOutlined />
+                Logout
+              </a-menu-item>
+            </a-menu>
+          </template>
+        </a-dropdown>
+      </div>
+      <div v-else>
+        <a-button type="primary" href="/user/login">Login</a-button>
+      </div>
     </a-row>
   </a-layout-header>
 </template>
 
 <script setup lang="ts">
-import { h, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import type { MenuProps } from 'ant-design-vue'
+import { computed, h, ref } from "vue"
+import { useRouter } from "vue-router"
+import { type MenuProps, message } from "ant-design-vue"
+import { useLoginUserStore } from "@/stores/loginUser.ts"
+import { GithubFilled, LogoutOutlined } from "@ant-design/icons-vue"
+import { userLogout } from "@/api/userController.ts"
+
+const doLogout = async () => {
+  const res = await userLogout()
+  if (res.data.code === 0) {
+    loginUserStore.setLoginUser({
+      userName: "Not Logged In",
+    })
+    message.success("Logout successful")
+    await router.push("/user/login")
+  } else {
+    message.error("Logout failed，" + res.data.message)
+  }
+}
+
+const loginUserStore = useLoginUserStore()
 
 const router = useRouter()
-const selectedKeys = ref<string[]>(['/'])
+const selectedKeys = ref<string[]>(["/"])
 router.afterEach((to, from, next) => {
   selectedKeys.value = [to.path]
 })
 
-const menuItems = ref([
+const originItems = [
   {
-    key: '/',
-    label: 'Home',
-    title: 'Home',
+    key: "repository",
+    label: h(
+      "a",
+      { href: "https://github.com/bookmountain/ai-web-generator", target: "_blank" },
+      "AI Web Generator",
+    ),
+    title: "AI Web Generator",
+    icon: h(GithubFilled),
   },
   {
-    key: '/about',
-    label: 'About',
-    title: 'About',
+    key: "/admin/userManage",
+    label: "User Management",
+    title: "User Management",
   },
-  {
-    key: 'others',
-    label: h('a', { href: 'https://www.codefather.cn', target: '_blank' }, 'AI Web Generator'),
-    title: 'AI Web Generator',
-  },
-])
+]
 
-const handleMenuClick: MenuProps['onClick'] = (e) => {
+const filterMenus = (menus = [] as MenuProps["items"]) => {
+  return menus?.filter((menu) => {
+    const menuKey = menu?.key as string
+    if (menuKey?.startsWith("/admin")) {
+      const loginUser = loginUserStore.loginUser
+      if (!loginUser || loginUser.userRole !== "admin") {
+        return false
+      }
+    }
+    return true
+  })
+}
+
+const menuItems = computed<MenuProps["items"]>(() => filterMenus(originItems))
+
+const handleMenuClick: MenuProps["onClick"] = (e) => {
   const key = e.key as string
   selectedKeys.value = [key]
-  if (key.startsWith('/')) {
+  if (key.startsWith("/")) {
     router.push(key)
   }
 }

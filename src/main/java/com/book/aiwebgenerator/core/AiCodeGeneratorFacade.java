@@ -3,6 +3,8 @@ package com.book.aiwebgenerator.core;
 import com.book.aiwebgenerator.ai.AiCodeGeneratorService;
 import com.book.aiwebgenerator.ai.model.HtmlCodeResult;
 import com.book.aiwebgenerator.ai.model.MultiFileCodeResult;
+import com.book.aiwebgenerator.core.parser.CodeParserExecutor;
+import com.book.aiwebgenerator.core.saver.CodeFileSaverExecutor;
 import com.book.aiwebgenerator.exception.BusinessException;
 import com.book.aiwebgenerator.exception.ErrorCode;
 import com.book.aiwebgenerator.model.enums.CodeGenTypeEnum;
@@ -21,87 +23,59 @@ public class AiCodeGeneratorFacade {
 
     public File generateAndSaveCode(String userMessage, CodeGenTypeEnum codeGenTypeEnum) {
         if (codeGenTypeEnum == null) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "The code generation type cannot be empty");
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Generate type is null");
         }
         return switch (codeGenTypeEnum) {
-            case HTML -> generateAndSaveHtmlCode(userMessage);
-            case MULTI_FILE -> generateAndSaveMultiFileCode(userMessage);
-            default -> {
-                String errorMessage = "Unsupported code generation type: " + codeGenTypeEnum.getValue();
-                throw new BusinessException(ErrorCode.PARAMS_ERROR, errorMessage);
+            case HTML -> {
+                HtmlCodeResult result = aiCodeGeneratorService.generateHtmlCode(userMessage);
+                yield CodeFileSaverExecutor.executeSaver(result, CodeGenTypeEnum.HTML);
             }
-        };
-    }
-
-    public Flux<String> generateAndSaveCodeStream(String userMessage, CodeGenTypeEnum codeGenTypeEnum) {
-        if (codeGenTypeEnum == null) {
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "The code generation type cannot be empty");
-        }
-        return switch (codeGenTypeEnum) {
-            case HTML -> generateAndSaveHtmlCodeStream(userMessage);
-            case MULTI_FILE -> generateAndSaveMultiFileCodeStream(userMessage);
+            case MULTI_FILE -> {
+                MultiFileCodeResult result = aiCodeGeneratorService.generateMultiFileCode(userMessage);
+                yield CodeFileSaverExecutor.executeSaver(result, CodeGenTypeEnum.MULTI_FILE);
+            }
             default -> {
-                String errorMessage = "Unsupported code generation type: " + codeGenTypeEnum.getValue();
+                String errorMessage = "Unsupported generate type：" + codeGenTypeEnum.getValue();
                 throw new BusinessException(ErrorCode.SYSTEM_ERROR, errorMessage);
             }
         };
     }
 
 
-    private Flux<String> generateAndSaveHtmlCodeStream(String userMessage) {
-        Flux<String> result = aiCodeGeneratorService.generateHtmlCodeStream(userMessage);
-        // Save code after stream generation is complete
+    public Flux<String> generateAndSaveCodeStream(String userMessage, CodeGenTypeEnum codeGenTypeEnum) {
+        if (codeGenTypeEnum == null) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Generate type is null");
+        }
+        return switch (codeGenTypeEnum) {
+            case HTML -> {
+                Flux<String> codeStream = aiCodeGeneratorService.generateHtmlCodeStream(userMessage);
+                yield processCodeStream(codeStream, CodeGenTypeEnum.HTML);
+            }
+            case MULTI_FILE -> {
+                Flux<String> codeStream = aiCodeGeneratorService.generateMultiFileCodeStream(userMessage);
+                yield processCodeStream(codeStream, CodeGenTypeEnum.MULTI_FILE);
+            }
+            default -> {
+                String errorMessage = "Unsupported generate type：" + codeGenTypeEnum.getValue();
+                throw new BusinessException(ErrorCode.SYSTEM_ERROR, errorMessage);
+            }
+        };
+    }
+
+
+    private Flux<String> processCodeStream(Flux<String> codeStream, CodeGenTypeEnum codeGenType) {
         StringBuilder codeBuilder = new StringBuilder();
-        return result
-                .doOnNext(chunk -> {
-                    // Collect code chunks in real-time
-                    codeBuilder.append(chunk);
-                })
-                .doOnComplete(() -> {
-                    // Save code after stream completion
-                    try {
-                        String completeHtmlCode = codeBuilder.toString();
-                        HtmlCodeResult htmlCodeResult = CodeParser.parseHtmlCode(completeHtmlCode);
-                        // Save code to file
-                        File savedDir = CodeFileSaver.saveHtmlCodeResult(htmlCodeResult);
-                        log.info("Save successful, path: " + savedDir.getAbsolutePath());
-                    } catch (Exception e) {
-                        log.error("Save failed: {}", e.getMessage());
-                    }
-                });
-    }
-
-    private Flux<String> generateAndSaveMultiFileCodeStream(String userMessage) {
-        Flux<String> result = aiCodeGeneratorService.generateMultiFileCodeStream(userMessage);
-        // Save code after stream generation is complete
-        StringBuilder codeBuilder = new StringBuilder();
-        return result
-                .doOnNext(chunk -> {
-                    // Collect code chunks in real-time
-                    codeBuilder.append(chunk);
-                })
-                .doOnComplete(() -> {
-                    // Save code after stream completion
-                    try {
-                        String completeMultiFileCode = codeBuilder.toString();
-                        MultiFileCodeResult multiFileResult = CodeParser.parseMultiFileCode(completeMultiFileCode);
-                        // Save code to file
-                        File savedDir = CodeFileSaver.saveMultiFileCodeResult(multiFileResult);
-                        log.info("Save successful, path: " + savedDir.getAbsolutePath());
-                    } catch (Exception e) {
-                        log.error("Save failed: {}", e.getMessage());
-                    }
-                });
+        return codeStream.doOnNext(codeBuilder::append).doOnComplete(() -> {
+            try {
+                String completeCode = codeBuilder.toString();
+                Object parsedResult = CodeParserExecutor.executeParser(completeCode, codeGenType);
+                File savedDir = CodeFileSaverExecutor.executeSaver(parsedResult, codeGenType);
+                log.info("Save successful, path: {}", savedDir.getAbsolutePath());
+            } catch (Exception e) {
+                log.error("Save failed: {}", e.getMessage());
+            }
+        });
     }
 
 
-    private File generateAndSaveHtmlCode(String userMessage) {
-        HtmlCodeResult htmlCodeResult = aiCodeGeneratorService.generateHtmlCode(userMessage);
-        return CodeFileSaver.saveHtmlCodeResult(htmlCodeResult);
-    }
-
-    private File generateAndSaveMultiFileCode(String userMessage) {
-        MultiFileCodeResult multiFileCodeResult = aiCodeGeneratorService.generateMultiFileCode(userMessage);
-        return CodeFileSaver.saveMultiFileCodeResult(multiFileCodeResult);
-    }
 }

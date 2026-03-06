@@ -10,6 +10,7 @@ import java.util.regex.Pattern;
  * Code Parser
  * Provides static methods to parse different types of code content
  */
+@Deprecated
 public class CodeParser {
 
     private static final Pattern HTML_CODE_PATTERN = Pattern.compile("```html\\s*\\n([\\s\\S]*?)```", Pattern.CASE_INSENSITIVE);

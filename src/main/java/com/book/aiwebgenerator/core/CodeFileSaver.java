@@ -10,6 +10,7 @@ import com.book.aiwebgenerator.model.enums.CodeGenTypeEnum;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 
+@Deprecated
 public class CodeFileSaver {
     private static final String FILE_SAVE_ROOT_DIR = System.getProperty("user.dir") + "/tmp/code/output";
 
@@ -29,7 +30,7 @@ public class CodeFileSaver {
         return new File(baseDirPath);
 
     }
-    
+
     private static void writeToFile(String dirPath, String fileName, String content) {
         String filePath = dirPath + File.separator + fileName;
         FileUtil.writeString(content, filePath, StandardCharsets.UTF_8);

@@ -6,6 +6,27 @@ spring:
     url: jdbc:mysql://localhost:3306/ai_web_generator
     username: root
     password: root
+  profiles:
+    active: local
+langchain4j:
+  open-ai:
+    chat-model:
+      base-url: https://api.deepseek.com
+      api-key: <YOUR-API-KEY>
+      model-name: deepseek-chat
+      max-tokens: 8192
+      log-requests: true
+      log-responses: true
+      strict-json-schema: true
+      response-format: json_object
+    streaming-chat-model:
+      base-url: https://api.deepseek.com
+      api-key: <Your API Key>
+      model-name: deepseek-chat
+      max-tokens: 8192
+      log-requests: true
+      log-responses: true
+
 server:
   port: 8123
   servlet:

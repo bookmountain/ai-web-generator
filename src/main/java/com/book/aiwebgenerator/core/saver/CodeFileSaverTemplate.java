@@ -4,6 +4,7 @@ package com.book.aiwebgenerator.core.saver;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
+import com.book.aiwebgenerator.constant.AppConstant;
 import com.book.aiwebgenerator.exception.BusinessException;
 import com.book.aiwebgenerator.exception.ErrorCode;
 import com.book.aiwebgenerator.model.enums.CodeGenTypeEnum;
@@ -12,9 +13,8 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 
 public abstract class CodeFileSaverTemplate<T> {
-    protected static final String FILE_SAVE_ROOT_DIR = System.getProperty("user.dir") + "/tmp/code_output";
-
-
+    private static final String FILE_SAVE_ROOT_DIR = AppConstant.CODE_OUTPUT_ROOT_DIR;
+    
     public final File saveCode(T result, Long appId) {
         validateInput(result);
         String baseDirPath = buildUniqueDir(appId);

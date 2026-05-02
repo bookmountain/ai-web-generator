@@ -12,10 +12,7 @@ import com.book.aiwebgenerator.constant.UserConstant;
 import com.book.aiwebgenerator.exception.BusinessException;
 import com.book.aiwebgenerator.exception.ErrorCode;
 import com.book.aiwebgenerator.exception.ThrowUtils;
-import com.book.aiwebgenerator.model.dto.app.AppAddRequest;
-import com.book.aiwebgenerator.model.dto.app.AppAdminUpdateRequest;
-import com.book.aiwebgenerator.model.dto.app.AppQueryRequest;
-import com.book.aiwebgenerator.model.dto.app.AppUpdateRequest;
+import com.book.aiwebgenerator.model.dto.app.*;
 import com.book.aiwebgenerator.model.entity.App;
 import com.book.aiwebgenerator.model.entity.User;
 import com.book.aiwebgenerator.model.enums.CodeGenTypeEnum;
@@ -131,6 +128,18 @@ public class AppController {
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
 
         return ResultUtils.success(true);
+    }
+
+
+    @PostMapping("/deploy")
+    public BaseResponse<String> deployApp(@RequestBody AppDeployRequest appDeployRequest, HttpServletRequest request) {
+        ThrowUtils.throwIf(appDeployRequest == null, ErrorCode.PARAMS_ERROR);
+        Long appId = appDeployRequest.getAppId();
+        ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR, "应用 ID 不能为空");
+        User loginUser = userService.getLoginUser(request);
+        String deployUrl = appService.deployApp(appId, loginUser);
+         
+        return ResultUtils.success(deployUrl);
     }
 
 

@@ -3,6 +3,12 @@ package com.book.aiwebgenerator.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.RandomUtil;
+
+import java.io.File;
+import java.time.LocalDateTime;
+
 import com.book.aiwebgenerator.core.AiCodeGeneratorFacade;
 import com.book.aiwebgenerator.exception.BusinessException;
 import com.book.aiwebgenerator.exception.ErrorCode;
@@ -13,6 +19,7 @@ import com.book.aiwebgenerator.model.enums.CodeGenTypeEnum;
 import com.book.aiwebgenerator.model.vo.AppVO;
 import com.book.aiwebgenerator.model.vo.UserVO;
 import com.book.aiwebgenerator.service.UserService;
+import com.book.aiwebgenerator.constant.AppConstant;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.book.aiwebgenerator.model.entity.App;
@@ -117,4 +124,50 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
         return aiCodeGeneratorFacade.generateAndSaveCodeStream(message, codeGenTypeEnum, appId);
     }
+
+    @Override
+    public String deployApp(Long appId, User loginUser) {
+        // 1. Parameter validation
+        ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR, "Application ID cannot be null");
+        ThrowUtils.throwIf(loginUser == null, ErrorCode.NOT_LOGIN_ERROR, "User is not logged in");
+        // 2. Query application information
+        App app = this.getById(appId);
+        ThrowUtils.throwIf(app == null, ErrorCode.NOT_FOUND_ERROR, "Application not found");
+        // 3. Verify the user has permission to deploy this app (only owner can deploy)
+        if (!app.getUserId().equals(loginUser.getId())) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "No permission to deploy this application");
+        }
+        // 4. Check if deployKey already exists
+        String deployKey = app.getDeployKey();
+        // If not present, generate a 6-character deployKey (letters + digits)
+        if (StrUtil.isBlank(deployKey)) {
+            deployKey = RandomUtil.randomString(6);
+        }
+        // 5. Build source directory path based on code generation type
+        String codeGenType = app.getCodeGenType();
+        String sourceDirName = codeGenType + "_" + appId;
+        String sourceDirPath = AppConstant.CODE_OUTPUT_ROOT_DIR + File.separator + sourceDirName;
+        // 6. Check whether the source directory exists
+        File sourceDir = new File(sourceDirPath);
+        if (!sourceDir.exists() || !sourceDir.isDirectory()) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Application code not found, please generate code first");
+        }
+        // 7. Copy files to the deployment directory
+        String deployDirPath = AppConstant.CODE_DEPLOY_ROOT_DIR + File.separator + deployKey;
+        try {
+            FileUtil.copyContent(sourceDir, new File(deployDirPath), true);
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Deployment failed: " + e.getMessage());
+        }
+        // 8. Update the app's deployKey and deployed time
+        App updatedApp = new App();
+        updatedApp.setId(appId);
+        updatedApp.setDeployKey(deployKey);
+        updatedApp.setDeployedTime(LocalDateTime.now());
+        boolean updateResult = this.updateById(updatedApp);
+        ThrowUtils.throwIf(!updateResult, ErrorCode.OPERATION_ERROR, "Failed to update application deployment info");
+        // 9. Return an accessible URL
+        return String.format("%s/%s/", AppConstant.CODE_DEPLOY_HOST, deployKey);
+    }
+
 }

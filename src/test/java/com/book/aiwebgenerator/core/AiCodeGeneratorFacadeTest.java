@@ -18,13 +18,13 @@ class AiCodeGeneratorFacadeTest {
 
     @Test
     void generateAndSaveCode() {
-        File file = aiCodeGeneratorFacade.generateAndSaveCode("Generate a login page, no longer than 20 lines of code", CodeGenTypeEnum.MULTI_FILE);
+        File file = aiCodeGeneratorFacade.generateAndSaveCode("Generate a login page, no longer than 20 lines of code", CodeGenTypeEnum.MULTI_FILE, 1L);
         Assertions.assertNotNull(file);
     }
 
     @Test
     void generateAndSaveCodeStream() {
-        Flux<String> codeStream = aiCodeGeneratorFacade.generateAndSaveCodeStream("Record task progress website, no longer than 20 lines of code", CodeGenTypeEnum.MULTI_FILE);
+        Flux<String> codeStream = aiCodeGeneratorFacade.generateAndSaveCodeStream("Record task progress website, no longer than 20 lines of code", CodeGenTypeEnum.MULTI_FILE, 1L);
         // Block and collect the stream results for testing purposes
         List<String> result = codeStream.collectList().block();
         // Validate the result

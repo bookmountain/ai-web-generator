@@ -15,9 +15,9 @@ public abstract class CodeFileSaverTemplate<T> {
     protected static final String FILE_SAVE_ROOT_DIR = System.getProperty("user.dir") + "/tmp/code_output";
 
 
-    public final File saveCode(T result) {
+    public final File saveCode(T result, Long appId) {
         validateInput(result);
-        String baseDirPath = buildUniqueDir();
+        String baseDirPath = buildUniqueDir(appId);
         saveFiles(result, baseDirPath);
         return new File(baseDirPath);
     }
@@ -28,9 +28,12 @@ public abstract class CodeFileSaverTemplate<T> {
         }
     }
 
-    protected final String buildUniqueDir() {
+    protected final String buildUniqueDir(Long appId) {
+        if (appId == null) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "appId cannot be null");
+        }
         String codeType = getCodeType().getValue();
-        String uniqueDirName = StrUtil.format("{}_{}", codeType, IdUtil.getSnowflakeNextIdStr());
+        String uniqueDirName = StrUtil.format("{}_{}", codeType, appId);
         String dirPath = FILE_SAVE_ROOT_DIR + File.separator + uniqueDirName;
         FileUtil.mkdir(dirPath);
         return dirPath;

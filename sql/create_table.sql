@@ -20,3 +20,23 @@ create table if not exists user
     UNIQUE KEY uk_userAccount (userAccount),
     INDEX idx_userName (userName)
 ) comment 'user' collate = utf8mb4_unicode_ci;
+
+create table app
+(
+    id           bigint auto_increment comment 'id' primary key,
+    appName      varchar(256)                       null comment 'app name',
+    cover        varchar(512)                       null comment 'app cover',
+    initPrompt   text                               null comment 'app initialization prompt',
+    codeGenType  varchar(64)                        null comment 'code generation type (enum)',
+    deployKey    varchar(64)                        null comment 'deployment key',
+    deployedTime datetime                           null comment 'deployment time',
+    priority     int      default 0                 not null comment 'priority',
+    userId       bigint                             not null comment 'user id who created this app',
+    editTime     datetime default CURRENT_TIMESTAMP not null comment 'edit time',
+    createTime   datetime default CURRENT_TIMESTAMP not null comment 'create time',
+    updateTime   datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment 'update time',
+    isDelete     tinyint  default 0                 not null comment 'is delete 0-no, 1-yes',
+    UNIQUE KEY uk_deployKey (deployKey), -- ensure deployment key is unique
+    INDEX idx_appName (appName),         -- improve query performance based on app name
+    INDEX idx_userId (userId)            -- improve query performance based on user id
+) comment 'app' collate = utf8mb4_unicode_ci;

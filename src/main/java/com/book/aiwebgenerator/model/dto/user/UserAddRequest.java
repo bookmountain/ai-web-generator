@@ -1,4 +1,4 @@
-package com.book.aiwebgenerator.model.dto;
+package com.book.aiwebgenerator.model.dto.user;
 
 import lombok.Data;
 

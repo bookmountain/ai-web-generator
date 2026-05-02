@@ -5,7 +5,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.book.aiwebgenerator.exception.BusinessException;
 import com.book.aiwebgenerator.exception.ErrorCode;
-import com.book.aiwebgenerator.model.dto.UserQueryRequest;
+import com.book.aiwebgenerator.model.dto.user.UserQueryRequest;
 import com.book.aiwebgenerator.model.enums.UserRoleEnum;
 import com.book.aiwebgenerator.model.vo.LoginUserVO;
 import com.book.aiwebgenerator.model.vo.UserVO;

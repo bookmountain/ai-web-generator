@@ -1,6 +1,6 @@
 package com.book.aiwebgenerator.service;
 
-import com.book.aiwebgenerator.model.dto.UserQueryRequest;
+import com.book.aiwebgenerator.model.dto.user.UserQueryRequest;
 import com.book.aiwebgenerator.model.vo.LoginUserVO;
 import com.book.aiwebgenerator.model.vo.UserVO;
 import com.mybatisflex.core.query.QueryWrapper;

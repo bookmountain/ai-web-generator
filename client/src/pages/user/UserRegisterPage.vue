@@ -1,42 +1,33 @@
 <template>
   <div id="userRegisterPage">
-    <h2 class="title">AI Web Generator - User Login</h2>
-    <div class="desc">Create a website only with prompts</div>
+    <h2 class="title">AI App Generator - User Registration</h2>
+    <div class="desc">Create a complete app without writing code</div>
     <a-form :model="formState" name="basic" autocomplete="off" @finish="handleSubmit">
-      <a-form-item
-        name="userAccount"
-        :rules="[{ required: true, message: 'Please enter account' }]"
-      >
-        <a-input v-model:value="formState.userAccount" placeholder="Please enter account" />
+      <a-form-item name="userAccount" :rules="[{ required: true, message: 'Please enter your account' }]">
+        <a-input v-model:value="formState.userAccount" placeholder="Please enter your account" />
       </a-form-item>
       <a-form-item
         name="userPassword"
         :rules="[
-          { required: true, message: 'Please enter password' },
+          { required: true, message: 'Please enter your password' },
           { min: 8, message: 'Password must be at least 8 characters' },
         ]"
       >
-        <a-input-password
-          v-model:value="formState.userPassword"
-          placeholder="Please enter password"
-        />
+        <a-input-password v-model:value="formState.userPassword" placeholder="Please enter your password" />
       </a-form-item>
       <a-form-item
         name="checkPassword"
         :rules="[
-          { required: true, message: 'Please confirm password' },
+          { required: true, message: 'Please confirm your password' },
           { min: 8, message: 'Password must be at least 8 characters' },
           { validator: validateCheckPassword },
         ]"
       >
-        <a-input-password
-          v-model:value="formState.checkPassword"
-          placeholder="Please confirm password"
-        />
+        <a-input-password v-model:value="formState.checkPassword" placeholder="Please confirm your password" />
       </a-form-item>
       <div class="tips">
         Already have an account?
-        <RouterLink to="/user/login">Login</RouterLink>
+        <RouterLink to="/user/login">Go to login</RouterLink>
       </div>
       <a-form-item>
         <a-button type="primary" html-type="submit" style="width: 100%">Register</a-button>
@@ -46,45 +37,58 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from "vue-router"
-import { userRegister } from "@/api/userController.ts"
-import { message } from "ant-design-vue"
-import { reactive } from "vue"
+import { useRouter } from 'vue-router'
+import { userRegister } from '@/api/userController.ts'
+import { message } from 'ant-design-vue'
+import { reactive } from 'vue'
 
 const router = useRouter()
 
 const formState = reactive<API.UserRegisterRequest>({
-  userAccount: "",
-  userPassword: "",
-  checkPassword: "",
+  userAccount: '',
+  userPassword: '',
+  checkPassword: '',
 })
 
+/**
+ * Validate confirmation password
+ * @param rule
+ * @param value
+ * @param callback
+ */
 const validateCheckPassword = (rule: unknown, value: string, callback: (error?: Error) => void) => {
   if (value && value !== formState.userPassword) {
-    callback(new Error("The two passwords do not match"))
+    callback(new Error('The two passwords do not match'))
   } else {
     callback()
   }
 }
 
+/**
+ * Submit the form
+ * @param values
+ */
 const handleSubmit = async (values: API.UserRegisterRequest) => {
   const res = await userRegister(values)
+  // On success, redirect to the login page
   if (res.data.code === 0) {
-    message.success("Register successful")
-    await router.push({
-      path: "/user/login",
+    message.success('Registration successful')
+    router.push({
+      path: '/user/login',
       replace: true,
     })
   } else {
-    message.error("Register failed，" + res.data.message)
+    message.error('Registration failed, ' + res.data.message)
   }
 }
 </script>
 
 <style scoped>
 #userRegisterPage {
-  max-width: 360px;
-  margin: 0 auto;
+  background: white;
+  max-width: 720px;
+  padding: 24px;
+  margin: 24px auto;
 }
 
 .title {

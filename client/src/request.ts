@@ -1,30 +1,38 @@
 import axios from 'axios'
 import { message } from 'ant-design-vue'
+import { API_BASE_URL } from '@/config/env'
 
+// Create Axios instance
 const myAxios = axios.create({
-  baseURL: 'http://localhost:8123/api',
+  baseURL: API_BASE_URL,
   timeout: 60000,
   withCredentials: true,
 })
 
+// Global request interceptor
 myAxios.interceptors.request.use(
   function (config) {
+    // Do something before request is sent
     return config
   },
   function (error) {
+    // Do something with request error
     return Promise.reject(error)
   },
 )
 
+// Global response interceptor
 myAxios.interceptors.response.use(
   function (response) {
     const { data } = response
+    // Not authenticated
     if (data.code === 40100) {
+      // If this is not the login-user request and we are not already on the login page, redirect there
       if (
         !response.request.responseURL.includes('user/get/login') &&
         !window.location.pathname.includes('/user/login')
       ) {
-        message.warning('Please login first')
+        message.warning('Please log in first')
         window.location.href = `/user/login?redirect=${window.location.href}`
       }
     }

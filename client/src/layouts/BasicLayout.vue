@@ -1,9 +1,12 @@
 <template>
   <a-layout class="basic-layout">
+    <!-- Top navigation bar -->
     <GlobalHeader />
+    <!-- Main content area -->
     <a-layout-content class="main-content">
       <router-view />
     </a-layout-content>
+    <!-- Footer copyright info -->
     <GlobalFooter />
   </a-layout>
 </template>
@@ -19,9 +22,9 @@ import GlobalFooter from '@/components/GlobalFooter.vue'
 }
 
 .main-content {
-  max-width: 1200px;
-  padding: 24px;
-  background: white;
-  margin: 16px auto 56px;
+  width: 100%;
+  padding: 0;
+  background: none;
+  margin: 0;
 }
 </style>

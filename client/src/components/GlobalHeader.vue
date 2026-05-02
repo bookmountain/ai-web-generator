@@ -1,14 +1,16 @@
 <template>
   <a-layout-header class="header">
     <a-row :wrap="false">
+      <!-- Left: logo and title -->
       <a-col flex="200px">
         <RouterLink to="/">
           <div class="header-left">
             <img class="logo" src="@/assets/logo.jpg" alt="Logo" />
-            <h1 class="site-title">AWG</h1>
+            <h1 class="site-title">AI App</h1>
           </div>
         </RouterLink>
       </a-col>
+      <!-- Middle: navigation menu -->
       <a-col flex="auto">
         <a-menu
           v-model:selectedKeys="selectedKeys"
@@ -17,25 +19,30 @@
           @click="handleMenuClick"
         />
       </a-col>
-      <div v-if="loginUserStore.loginUser.id">
-        <a-dropdown>
-          <a-space>
-            <a-avatar :src="loginUserStore.loginUser.userAvatar" />
-            {{ loginUserStore.loginUser.userName ?? "User" }}
-          </a-space>
-          <template #overlay>
-            <a-menu>
-              <a-menu-item @click="doLogout">
-                <LogoutOutlined />
-                Logout
-              </a-menu-item>
-            </a-menu>
-          </template>
-        </a-dropdown>
-      </div>
-      <div v-else>
-        <a-button type="primary" href="/user/login">Login</a-button>
-      </div>
+      <!-- Right: user actions area -->
+      <a-col>
+        <div class="user-login-status">
+          <div v-if="loginUserStore.loginUser.id">
+            <a-dropdown>
+              <a-space>
+                <a-avatar :src="loginUserStore.loginUser.userAvatar" />
+                {{ loginUserStore.loginUser.userName ?? "Anonymous" }}
+              </a-space>
+              <template #overlay>
+                <a-menu>
+                  <a-menu-item @click="doLogout">
+                    <LogoutOutlined />
+                    Log out
+                  </a-menu-item>
+                </a-menu>
+              </template>
+            </a-dropdown>
+          </div>
+          <div v-else>
+            <a-button type="primary" href="/user/login">Log in</a-button>
+          </div>
+        </div>
+      </a-col>
     </a-row>
   </a-layout-header>
 </template>
@@ -45,48 +52,47 @@ import { computed, h, ref } from "vue"
 import { useRouter } from "vue-router"
 import { type MenuProps, message } from "ant-design-vue"
 import { useLoginUserStore } from "@/stores/loginUser.ts"
-import { GithubFilled, LogoutOutlined } from "@ant-design/icons-vue"
 import { userLogout } from "@/api/userController.ts"
-
-const doLogout = async () => {
-  const res = await userLogout()
-  if (res.data.code === 0) {
-    loginUserStore.setLoginUser({
-      userName: "Not Logged In",
-    })
-    message.success("Logout successful")
-    await router.push("/user/login")
-  } else {
-    message.error("Logout failed，" + res.data.message)
-  }
-}
+import { LogoutOutlined } from "@ant-design/icons-vue"
 
 const loginUserStore = useLoginUserStore()
-
 const router = useRouter()
+// Currently selected menu
 const selectedKeys = ref<string[]>(["/"])
+// Watch route changes and update the selected menu
 router.afterEach((to, from, next) => {
   selectedKeys.value = [to.path]
 })
 
+// Menu configuration
 const originItems = [
   {
-    key: "repository",
-    label: h(
-      "a",
-      { href: "https://github.com/bookmountain/ai-web-generator", target: "_blank" },
-      "AI Web Generator",
-    ),
-    title: "AI Web Generator",
-    icon: h(GithubFilled),
+    key: "/",
+    label: "Home",
+    title: "Home",
   },
   {
     key: "/admin/userManage",
     label: "User Management",
     title: "User Management",
   },
+  {
+    key: "/admin/appManage",
+    label: "App Management",
+    title: "App Management",
+  },
+  {
+    key: "others",
+    label: h(
+      "a",
+      { href: "https://me.bookmountain.work", target: "_blank" },
+      "Programming Navigation",
+    ),
+    title: "Programming Navigation",
+  },
 ]
 
+// Filter menu items
 const filterMenus = (menus = [] as MenuProps["items"]) => {
   return menus?.filter((menu) => {
     const menuKey = menu?.key as string
@@ -100,13 +106,30 @@ const filterMenus = (menus = [] as MenuProps["items"]) => {
   })
 }
 
+// Routes shown in the menu
 const menuItems = computed<MenuProps["items"]>(() => filterMenus(originItems))
 
+// Handle menu click
 const handleMenuClick: MenuProps["onClick"] = (e) => {
   const key = e.key as string
   selectedKeys.value = [key]
+  // Navigate to the corresponding page
   if (key.startsWith("/")) {
     router.push(key)
+  }
+}
+
+// Log out
+const doLogout = async () => {
+  const res = await userLogout()
+  if (res.data.code === 0) {
+    loginUserStore.setLoginUser({
+      userName: "Not logged in",
+    })
+    message.success("Logged out successfully")
+    await router.push("/user/login")
+  } else {
+    message.error("Logout failed: " + res.data.message)
   }
 }
 </script>

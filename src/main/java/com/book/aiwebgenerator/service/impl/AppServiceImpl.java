@@ -7,6 +7,7 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RandomUtil;
 
 import java.io.File;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 import com.book.aiwebgenerator.core.AiCodeGeneratorFacade;
@@ -15,9 +16,11 @@ import com.book.aiwebgenerator.exception.ErrorCode;
 import com.book.aiwebgenerator.exception.ThrowUtils;
 import com.book.aiwebgenerator.model.dto.app.AppQueryRequest;
 import com.book.aiwebgenerator.model.entity.User;
+import com.book.aiwebgenerator.model.enums.ChatHistoryMessageTypeEnum;
 import com.book.aiwebgenerator.model.enums.CodeGenTypeEnum;
 import com.book.aiwebgenerator.model.vo.AppVO;
 import com.book.aiwebgenerator.model.vo.UserVO;
+import com.book.aiwebgenerator.service.ChatHistoryService;
 import com.book.aiwebgenerator.service.UserService;
 import com.book.aiwebgenerator.constant.AppConstant;
 import com.mybatisflex.core.query.QueryWrapper;
@@ -26,6 +29,7 @@ import com.book.aiwebgenerator.model.entity.App;
 import com.book.aiwebgenerator.mapper.AppMapper;
 import com.book.aiwebgenerator.service.AppService;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
@@ -35,7 +39,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-
+@Slf4j
 @Service
 public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppService {
     @Resource
@@ -43,6 +47,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
     @Resource
     private AiCodeGeneratorFacade aiCodeGeneratorFacade;
+
+    @Resource
+    private ChatHistoryService chatHistoryService;
 
     @Override
     public AppVO getAppVO(App app) {
@@ -122,7 +129,27 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
         ThrowUtils.throwIf(codeGenTypeEnum == null, ErrorCode.SYSTEM_ERROR, "Invalid code generation type configured for this application");
 
-        return aiCodeGeneratorFacade.generateAndSaveCodeStream(message, codeGenTypeEnum, appId);
+        // Save user's chat message in database before calling AI
+        chatHistoryService.addChatMessage(appId, message, ChatHistoryMessageTypeEnum.USER.getValue(), loginUser.getId());
+
+        Flux<String> contentFlux = aiCodeGeneratorFacade.generateAndSaveCodeStream(message, codeGenTypeEnum, appId);
+
+        StringBuilder aiResponseBuilder = new StringBuilder();
+        return contentFlux
+                .map(chunk -> {
+                    aiResponseBuilder.append(chunk);
+                    return chunk;
+                })
+                .doOnComplete(() -> {
+                    String aiResponse = aiResponseBuilder.toString();
+                    if (StrUtil.isNotBlank(aiResponse)) {
+                        chatHistoryService.addChatMessage(appId, aiResponse, ChatHistoryMessageTypeEnum.AI.getValue(), loginUser.getId());
+                    }
+                })
+                .doOnError(error -> {
+                    String errorMessage = "AI failed to reply: " + error.getMessage();
+                    chatHistoryService.addChatMessage(appId, errorMessage, ChatHistoryMessageTypeEnum.AI.getValue(), loginUser.getId());
+                });
     }
 
     @Override
@@ -170,4 +197,24 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         return String.format("%s/%s/", AppConstant.CODE_DEPLOY_HOST, deployKey);
     }
 
+
+    @Override
+    public boolean removeById(Serializable id) {
+        if (id == null) {
+            return false;
+        }
+
+        long appId = Long.parseLong(id.toString());
+        if (appId <= 0) {
+            return false;
+        }
+
+        try {
+            chatHistoryService.deleteByAppId(appId);
+        } catch (Exception e) {
+            log.error("Failed to delete chat history: {}", e.getMessage());
+        }
+
+        return super.removeById(id);
+    }
 }

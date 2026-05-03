@@ -40,3 +40,19 @@ create table app
     INDEX idx_appName (appName),         -- improve query performance based on app name
     INDEX idx_userId (userId)            -- improve query performance based on user id
 ) comment 'app' collate = utf8mb4_unicode_ci;
+
+create table chat_history
+(
+    id          bigint auto_increment comment 'id' primary key,
+    message     text                               not null comment 'message',
+    messageType varchar(32)                        not null comment 'user/ai',
+    appId       bigint                             not null comment 'app id',
+    userId      bigint                             not null comment 'creator user id',
+    createTime  datetime default CURRENT_TIMESTAMP not null comment 'created time',
+    updateTime  datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment 'updated time',
+    isDelete    tinyint  default 0                 not null comment 'deleted or not',
+    INDEX idx_appId (appId),                       -- improve query performance by app
+    INDEX idx_createTime (createTime),             -- improve query performance by time
+    INDEX idx_appId_createTime (appId, createTime) -- core index for cursor pagination
+) comment 'chat history' collate = utf8mb4_unicode_ci;
+

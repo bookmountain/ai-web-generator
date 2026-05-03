@@ -11,7 +11,7 @@ import java.util.Map;
 
 public class MyBatisCodeGenerator {
     // Table names to generate code for, if not set, all tables will be generated
-    private static final String[] TABLE_NAMES = {"app"};
+    private static final String[] TABLE_NAMES = {"chat_history"};
 
     public static void main(String[] args) {
         // Get database connection information from application.yml

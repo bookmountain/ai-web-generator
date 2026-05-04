@@ -1,9 +1,7 @@
 /* eslint-disable */
 import request from "@/request"
 
-/** GET /static/${param0}/** */
 export async function serveStaticResource(
-  // Parameter type added by generation for non-body params
   params: API.serveStaticResourceParams,
   options?: { [key: string]: any },
 ) {

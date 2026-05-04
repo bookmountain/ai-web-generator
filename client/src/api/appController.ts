@@ -1,7 +1,6 @@
 /* eslint-disable */
 import request from "@/request"
 
-/** POST /app/add */
 export async function addApp(body: API.AppAddRequest, options?: { [key: string]: any }) {
   return request<API.BaseResponseLong>("/app/add", {
     method: "POST",
@@ -13,7 +12,6 @@ export async function addApp(body: API.AppAddRequest, options?: { [key: string]:
   })
 }
 
-/** POST /app/admin/delete */
 export async function deleteAppByAdmin(body: API.DeleteRequest, options?: { [key: string]: any }) {
   return request<API.BaseResponseBoolean>("/app/admin/delete", {
     method: "POST",
@@ -25,9 +23,7 @@ export async function deleteAppByAdmin(body: API.DeleteRequest, options?: { [key
   })
 }
 
-/** GET /app/admin/get/vo */
 export async function getAppVoByIdByAdmin(
-  // Parameter type added by generation for non-body params
   params: API.getAppVOByIdByAdminParams,
   options?: { [key: string]: any },
 ) {
@@ -40,7 +36,6 @@ export async function getAppVoByIdByAdmin(
   })
 }
 
-/** POST /app/admin/list/page/vo */
 export async function listAppVoByPageByAdmin(
   body: API.AppQueryRequest,
   options?: { [key: string]: any },
@@ -55,7 +50,6 @@ export async function listAppVoByPageByAdmin(
   })
 }
 
-/** POST /app/admin/update */
 export async function updateAppByAdmin(
   body: API.AppAdminUpdateRequest,
   options?: { [key: string]: any },
@@ -70,9 +64,7 @@ export async function updateAppByAdmin(
   })
 }
 
-/** GET /app/chat/gen/code */
 export async function chatToGenCode(
-  // Parameter type added by generation for non-body params
   params: API.chatToGenCodeParams,
   options?: { [key: string]: any },
 ) {
@@ -85,7 +77,6 @@ export async function chatToGenCode(
   })
 }
 
-/** POST /app/delete */
 export async function deleteApp(body: API.DeleteRequest, options?: { [key: string]: any }) {
   return request<API.BaseResponseBoolean>("/app/delete", {
     method: "POST",
@@ -97,7 +88,6 @@ export async function deleteApp(body: API.DeleteRequest, options?: { [key: strin
   })
 }
 
-/** POST /app/deploy */
 export async function deployApp(body: API.AppDeployRequest, options?: { [key: string]: any }) {
   return request<API.BaseResponseString>("/app/deploy", {
     method: "POST",
@@ -109,9 +99,7 @@ export async function deployApp(body: API.AppDeployRequest, options?: { [key: st
   })
 }
 
-/** GET /app/get/vo */
 export async function getAppVoById(
-  // Parameter type added by generation for non-body params
   params: API.getAppVOByIdParams,
   options?: { [key: string]: any },
 ) {
@@ -124,7 +112,6 @@ export async function getAppVoById(
   })
 }
 
-/** POST /app/good/list/page/vo */
 export async function listGoodAppVoByPage(
   body: API.AppQueryRequest,
   options?: { [key: string]: any },
@@ -139,7 +126,6 @@ export async function listGoodAppVoByPage(
   })
 }
 
-/** POST /app/my/list/page/vo */
 export async function listMyAppVoByPage(
   body: API.AppQueryRequest,
   options?: { [key: string]: any },
@@ -154,7 +140,6 @@ export async function listMyAppVoByPage(
   })
 }
 
-/** POST /app/update */
 export async function updateApp(body: API.AppUpdateRequest, options?: { [key: string]: any }) {
   return request<API.BaseResponseBoolean>("/app/update", {
     method: "POST",

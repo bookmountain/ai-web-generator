@@ -1,6 +1,7 @@
 package com.book.aiwebgenerator.core;
 
 import com.book.aiwebgenerator.ai.AiCodeGeneratorService;
+import com.book.aiwebgenerator.ai.AiCodeGeneratorServiceFactory;
 import com.book.aiwebgenerator.ai.model.HtmlCodeResult;
 import com.book.aiwebgenerator.ai.model.MultiFileCodeResult;
 import com.book.aiwebgenerator.core.parser.CodeParserExecutor;
@@ -19,12 +20,13 @@ import java.io.File;
 @Service
 public class AiCodeGeneratorFacade {
     @Resource
-    private AiCodeGeneratorService aiCodeGeneratorService;
+    private AiCodeGeneratorServiceFactory aiCodeGeneratorServiceFactory;
 
     public File generateAndSaveCode(String userMessage, CodeGenTypeEnum codeGenTypeEnum, Long appId) {
         if (codeGenTypeEnum == null) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Generate type is null");
         }
+        AiCodeGeneratorService aiCodeGeneratorService = aiCodeGeneratorServiceFactory.getAiCodeGeneratorService(appId);
         return switch (codeGenTypeEnum) {
             case HTML -> {
                 HtmlCodeResult result = aiCodeGeneratorService.generateHtmlCode(userMessage);
@@ -46,6 +48,7 @@ public class AiCodeGeneratorFacade {
         if (codeGenTypeEnum == null) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Generate type is null");
         }
+        AiCodeGeneratorService aiCodeGeneratorService = aiCodeGeneratorServiceFactory.getAiCodeGeneratorService(appId);
         return switch (codeGenTypeEnum) {
             case HTML -> {
                 Flux<String> codeStream = aiCodeGeneratorService.generateHtmlCodeStream(userMessage);

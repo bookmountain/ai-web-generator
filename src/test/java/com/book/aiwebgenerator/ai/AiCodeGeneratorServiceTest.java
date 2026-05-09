@@ -26,4 +26,17 @@ class AiCodeGeneratorServiceTest {
         MultiFileCodeResult result = aiCodeGeneratorService.generateMultiFileCode("it should be not longer than 50 lines");
         Assertions.assertNotNull(result);
     }
+
+    @Test
+    void testChatMemory() {
+        HtmlCodeResult result = aiCodeGeneratorService.generateHtmlCode("Create a tool website like Programmer Fish, with total code no more than 20 lines");
+        Assertions.assertNotNull(result);
+        result = aiCodeGeneratorService.generateHtmlCode("Don't generate a website. Tell me what you just made?");
+        Assertions.assertNotNull(result);
+        result = aiCodeGeneratorService.generateHtmlCode("Create a tool website like Programmer Fish, with total code no more than 20 lines");
+        Assertions.assertNotNull(result);
+        result = aiCodeGeneratorService.generateHtmlCode("Don't generate a website. Tell me what you just made?");
+        Assertions.assertNotNull(result);
+    }
+
 }

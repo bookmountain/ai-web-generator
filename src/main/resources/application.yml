@@ -1,11 +1,19 @@
 spring:
   application:
     name: ai-web-generator-backend
+  session:
+    store-type: redis
+    timeout: 2592000
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/ai_web_generator
     username: root
     password: root
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      ttl: 3600
   profiles:
     active: local
 langchain4j:
@@ -13,7 +21,7 @@ langchain4j:
     chat-model:
       base-url: https://api.deepseek.com
       api-key: <YOUR-API-KEY>
-      model-name: deepseek-chat
+      model-name: deepseek-v4-flash
       max-tokens: 8192
       log-requests: true
       log-responses: true
@@ -22,7 +30,7 @@ langchain4j:
     streaming-chat-model:
       base-url: https://api.deepseek.com
       api-key: <YOUR-API-KEY>
-      model-name: deepseek-chat
+      model-name: deepseek-v4-flash
       max-tokens: 8192
       log-requests: true
       log-responses: true
@@ -31,6 +39,9 @@ server:
   port: 8123
   servlet:
     context-path: /api
+    session:
+      cookie:
+        max-age: 2592000
 # springdoc-openapi
 springdoc:
   group-configs:

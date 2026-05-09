@@ -1,5 +1,6 @@
 package com.book.aiwebgenerator.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.book.aiwebgenerator.constant.UserConstant;
 import com.book.aiwebgenerator.exception.ErrorCode;
@@ -15,13 +16,19 @@ import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.book.aiwebgenerator.model.entity.ChatHistory;
 import com.book.aiwebgenerator.mapper.ChatHistoryMapper;
 import com.book.aiwebgenerator.service.ChatHistoryService;
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
+@Slf4j
 public class ChatHistoryServiceImpl extends ServiceImpl<ChatHistoryMapper, ChatHistory> implements ChatHistoryService {
     @Resource
     @Lazy
@@ -51,6 +58,38 @@ public class ChatHistoryServiceImpl extends ServiceImpl<ChatHistoryMapper, ChatH
         QueryWrapper queryWrapper = QueryWrapper.create()
                 .eq("appId", appId);
         return this.remove(queryWrapper);
+    }
+
+    @Override
+    public int loadChatHistoryToMemory(Long appId, MessageWindowChatMemory chatMemory, int maxCount) {
+        try {
+            QueryWrapper queryWrapper = QueryWrapper.create()
+                    .eq(ChatHistory::getAppId, appId)
+                    .orderBy(ChatHistory::getCreateTime, false)
+                    .limit(1, maxCount);
+            List<ChatHistory> historyList = this.list(queryWrapper);
+            if (CollUtil.isEmpty(historyList)) {
+                return 0;
+            }
+            historyList = historyList.reversed();
+            int loadedCount = 0;
+            chatMemory.clear();
+            for (ChatHistory history : historyList) {
+                if (ChatHistoryMessageTypeEnum.USER.getValue().equals(history.getMessageType())) {
+                    chatMemory.add(UserMessage.from(history.getMessage()));
+
+                } else if (ChatHistoryMessageTypeEnum.AI.getValue().equals(history.getMessageType())) {
+                    chatMemory.add(AiMessage.from(history.getMessage()));
+                }
+                loadedCount++;
+            }
+            log.info("appId={} loaded {} chat history messages to memory", appId, loadedCount);
+
+            return loadedCount;
+        } catch (Exception e) {
+            log.error("Failed to load chat history to memory for appId={}, error: {}", appId, e.getMessage());
+            return 0;
+        }
     }
 
 

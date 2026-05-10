@@ -33,4 +33,16 @@ class AiCodeGeneratorFacadeTest {
         Assertions.assertNotNull(completeContent);
     }
 
+    @Test
+    void generateVueProjectCodeStream() {
+        Flux<String> codeStream = aiCodeGeneratorFacade.generateAndSaveCodeStream(
+                "Simple todo list website, total code amount not exceeding 200 lines",
+                CodeGenTypeEnum.VUE_PROJECT, 1L);
+        List<String> result = codeStream.collectList().block();
+
+        Assertions.assertNotNull(result);
+        String completeContent = String.join("", result);
+        Assertions.assertNotNull(completeContent);
+    }
+
 }

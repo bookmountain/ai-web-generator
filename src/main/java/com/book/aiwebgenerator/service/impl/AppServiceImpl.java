@@ -11,6 +11,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 import com.book.aiwebgenerator.core.AiCodeGeneratorFacade;
+import com.book.aiwebgenerator.core.handler.StreamHandlerExecutor;
 import com.book.aiwebgenerator.exception.BusinessException;
 import com.book.aiwebgenerator.exception.ErrorCode;
 import com.book.aiwebgenerator.exception.ThrowUtils;
@@ -50,6 +51,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
     @Resource
     private ChatHistoryService chatHistoryService;
+
+    @Resource
+    private StreamHandlerExecutor streamHandlerExecutor;
 
     @Override
     public AppVO getAppVO(App app) {
@@ -129,27 +133,13 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
         ThrowUtils.throwIf(codeGenTypeEnum == null, ErrorCode.SYSTEM_ERROR, "Invalid code generation type configured for this application");
 
-        // Save user's chat message in database before calling AI
+        // 5. After passing validation, add the user message to chat history
         chatHistoryService.addChatMessage(appId, message, ChatHistoryMessageTypeEnum.USER.getValue(), loginUser.getId());
+        // 6. Call AI to generate code (streaming)
+        Flux<String> codeStream = aiCodeGeneratorFacade.generateAndSaveCodeStream(message, codeGenTypeEnum, appId);
 
-        Flux<String> contentFlux = aiCodeGeneratorFacade.generateAndSaveCodeStream(message, codeGenTypeEnum, appId);
-
-        StringBuilder aiResponseBuilder = new StringBuilder();
-        return contentFlux
-                .map(chunk -> {
-                    aiResponseBuilder.append(chunk);
-                    return chunk;
-                })
-                .doOnComplete(() -> {
-                    String aiResponse = aiResponseBuilder.toString();
-                    if (StrUtil.isNotBlank(aiResponse)) {
-                        chatHistoryService.addChatMessage(appId, aiResponse, ChatHistoryMessageTypeEnum.AI.getValue(), loginUser.getId());
-                    }
-                })
-                .doOnError(error -> {
-                    String errorMessage = "AI failed to reply: " + error.getMessage();
-                    chatHistoryService.addChatMessage(appId, errorMessage, ChatHistoryMessageTypeEnum.AI.getValue(), loginUser.getId());
-                });
+        // 7. Collect AI response content and record it to chat history after completion
+        return streamHandlerExecutor.doExecute(codeStream, chatHistoryService, appId, loginUser, codeGenTypeEnum);
     }
 
     @Override

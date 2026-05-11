@@ -79,7 +79,7 @@ public class AppController {
         BeanUtil.copyProperties(appAddRequest, app);
         app.setUserId(loginUser.getId());
         app.setAppName(initPrompt.substring(0, Math.min(initPrompt.length(), 12)));
-        app.setCodeGenType(CodeGenTypeEnum.MULTI_FILE.getValue());
+        app.setCodeGenType(CodeGenTypeEnum.VUE_PROJECT.getValue());
 
         boolean result = appService.save(app);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
@@ -138,7 +138,7 @@ public class AppController {
         ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR, "应用 ID 不能为空");
         User loginUser = userService.getLoginUser(request);
         String deployUrl = appService.deployApp(appId, loginUser);
-         
+
         return ResultUtils.success(deployUrl);
     }
 

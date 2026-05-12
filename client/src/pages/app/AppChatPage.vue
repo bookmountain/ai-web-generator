@@ -193,6 +193,7 @@ interface Message {
 const messages = ref<Message[]>([])
 const userInput = ref("")
 const isGenerating = ref(false)
+const currentEventSource = ref<EventSource | null>(null)
 const messagesContainer = ref<HTMLElement>()
 
 // Chat history pagination
@@ -360,7 +361,16 @@ const generateCode = async (userMessage: string, aiMessageIndex: number) => {
   let eventSource: EventSource | null = null
   let streamCompleted = false
 
+  const closeEventSource = () => {
+    eventSource?.close()
+    if (currentEventSource.value === eventSource) {
+      currentEventSource.value = null
+    }
+  }
+
   try {
+    currentEventSource.value?.close()
+
     const baseURL = request.defaults.baseURL || API_BASE_URL
 
     const params = new URLSearchParams({
@@ -373,6 +383,7 @@ const generateCode = async (userMessage: string, aiMessageIndex: number) => {
     eventSource = new EventSource(url, {
       withCredentials: true,
     })
+    currentEventSource.value = eventSource
 
     let fullContent = ""
 
@@ -391,6 +402,8 @@ const generateCode = async (userMessage: string, aiMessageIndex: number) => {
         }
       } catch (error) {
         console.error("Failed to parse message:", error)
+        streamCompleted = true
+        closeEventSource()
         handleError(error, aiMessageIndex)
       }
     }
@@ -400,7 +413,7 @@ const generateCode = async (userMessage: string, aiMessageIndex: number) => {
 
       streamCompleted = true
       isGenerating.value = false
-      eventSource?.close()
+      closeEventSource()
 
       setTimeout(async () => {
         await fetchAppInfo()
@@ -409,22 +422,18 @@ const generateCode = async (userMessage: string, aiMessageIndex: number) => {
     })
 
     eventSource.onerror = function () {
-      if (streamCompleted || !isGenerating.value) return
-      if (eventSource?.readyState === EventSource.CONNECTING) {
-        streamCompleted = true
-        isGenerating.value = false
-        eventSource?.close()
-
-        setTimeout(async () => {
-          await fetchAppInfo()
-          updatePreview()
-        }, 1000)
-      } else {
-        handleError(new Error("SSE connection error"), aiMessageIndex)
+      if (streamCompleted || !isGenerating.value) {
+        closeEventSource()
+        return
       }
+
+      streamCompleted = true
+      closeEventSource()
+      handleError(new Error("SSE connection error"), aiMessageIndex)
     }
   } catch (error) {
     console.error("Failed to create EventSource:", error)
+    closeEventSource()
     handleError(error, aiMessageIndex)
   }
 }
@@ -525,7 +534,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  // EventSource is closed when the stream completes or errors
+  currentEventSource.value?.close()
+  currentEventSource.value = null
 })
 </script>
 

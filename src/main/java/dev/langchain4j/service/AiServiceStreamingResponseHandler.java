@@ -35,6 +35,7 @@ import static dev.langchain4j.internal.ValidationUtils.ensureNotNull;
 @Internal
 class AiServiceStreamingResponseHandler implements StreamingChatResponseHandler {
     private static final Logger LOG = LoggerFactory.getLogger(AiServiceStreamingResponseHandler.class);
+    private static final int MAX_TOOL_EXECUTION_ROUNDS = 20;
 
     private final ChatExecutor chatExecutor;
     private final AiServiceContext context;
@@ -57,6 +58,7 @@ class AiServiceStreamingResponseHandler implements StreamingChatResponseHandler 
     private final Map<String, ToolExecutor> toolExecutors;
     private final List<String> responseBuffer = new ArrayList<>();
     private final boolean hasOutputGuardrails;
+    private final int toolExecutionRound;
 
     AiServiceStreamingResponseHandler(
             ChatExecutor chatExecutor,
@@ -73,7 +75,8 @@ class AiServiceStreamingResponseHandler implements StreamingChatResponseHandler 
             List<ToolSpecification> toolSpecifications,
             Map<String, ToolExecutor> toolExecutors,
             GuardrailRequestParams commonGuardrailParams,
-            Object methodKey) {
+            Object methodKey,
+            int toolExecutionRound) {
         this.chatExecutor = ensureNotNull(chatExecutor, "chatExecutor");
         this.context = ensureNotNull(context, "context");
         this.memoryId = ensureNotNull(memoryId, "memoryId");
@@ -93,6 +96,7 @@ class AiServiceStreamingResponseHandler implements StreamingChatResponseHandler 
         this.toolSpecifications = copy(toolSpecifications);
         this.toolExecutors = copy(toolExecutors);
         this.hasOutputGuardrails = context.guardrailService().hasOutputGuardrails(methodKey);
+        this.toolExecutionRound = toolExecutionRound;
     }
 
     @Override
@@ -117,6 +121,11 @@ class AiServiceStreamingResponseHandler implements StreamingChatResponseHandler 
         addToMemory(aiMessage);
 
         if (aiMessage.hasToolExecutionRequests()) {
+            if (toolExecutionRound >= MAX_TOOL_EXECUTION_ROUNDS) {
+                onError(new IllegalStateException("Exceeded maximum tool execution rounds: " + MAX_TOOL_EXECUTION_ROUNDS));
+                return;
+            }
+
             for (ToolExecutionRequest toolExecutionRequest : aiMessage.toolExecutionRequests()) {
                 String toolName = toolExecutionRequest.name();
                 ToolExecutor toolExecutor = toolExecutors.get(toolName);
@@ -154,7 +163,8 @@ class AiServiceStreamingResponseHandler implements StreamingChatResponseHandler 
                     toolSpecifications,
                     toolExecutors,
                     commonGuardrailParams,
-                    methodKey);
+                    methodKey,
+                    toolExecutionRound + 1);
 
             context.streamingChatModel.chat(chatRequest, handler);
         } else {

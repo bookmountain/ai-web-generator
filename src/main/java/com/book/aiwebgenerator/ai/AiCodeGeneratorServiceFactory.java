@@ -25,6 +25,10 @@ import java.time.Duration;
 @Configuration
 public class AiCodeGeneratorServiceFactory {
 
+    private static final int DEFAULT_CHAT_MEMORY_MAX_MESSAGES = 20;
+    private static final int VUE_PROJECT_CHAT_MEMORY_MAX_MESSAGES = 100;
+    private static final int CHAT_HISTORY_LOAD_COUNT = 20;
+
     @Resource
     private ChatModel chatModel;
 
@@ -60,14 +64,17 @@ public class AiCodeGeneratorServiceFactory {
 
     private AiCodeGeneratorService createAiCodeGeneratorService(long appId, CodeGenTypeEnum codeGenType) {
         log.info("appId: {} create a new AI service instance", appId);
+        int maxMessages = codeGenType == CodeGenTypeEnum.VUE_PROJECT
+                ? VUE_PROJECT_CHAT_MEMORY_MAX_MESSAGES
+                : DEFAULT_CHAT_MEMORY_MAX_MESSAGES;
         MessageWindowChatMemory chatMemory = MessageWindowChatMemory
                 .builder()
                 .id(appId)
                 .chatMemoryStore(redisChatMemoryStore)
-                .maxMessages(20)
+                .maxMessages(maxMessages)
                 .build();
         // Load chat history to memory from database
-        chatHistoryService.loadChatHistoryToMemory(appId, chatMemory, 20);
+        chatHistoryService.loadChatHistoryToMemory(appId, chatMemory, CHAT_HISTORY_LOAD_COUNT);
 
         return switch (codeGenType) {
             // Vue project use tool calling and reasoner model
@@ -100,4 +107,3 @@ public class AiCodeGeneratorServiceFactory {
         return appId + "_" + codeGenType.getValue();
     }
 }
-

@@ -152,7 +152,8 @@ public class AiServiceTokenStream implements TokenStream {
                 toolSpecifications,
                 toolExecutors,
                 commonGuardrailParams,
-                methodKey);
+                methodKey,
+                0);
 
         if (contentsHandler != null && retrievedContents != null) {
             contentsHandler.accept(retrievedContents);

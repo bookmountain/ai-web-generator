@@ -132,7 +132,7 @@ const doSearch = () => {
 }
 
 // Delete data
-const doDelete = async (id: string) => {
+const doDelete = async (id: number) => {
   if (!id) {
     return
   }

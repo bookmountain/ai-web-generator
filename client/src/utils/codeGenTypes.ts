@@ -2,8 +2,9 @@
  * Code generation type enum
  */
 export enum CodeGenTypeEnum {
-  HTML = 'html',
-  MULTI_FILE = 'multi_file',
+  HTML = "html",
+  MULTI_FILE = "multi_file",
+  VUE_PROJECT = "vue_project",
 }
 
 /**
@@ -11,12 +12,16 @@ export enum CodeGenTypeEnum {
  */
 export const CODE_GEN_TYPE_CONFIG = {
   [CodeGenTypeEnum.HTML]: {
-    label: 'Native HTML mode',
+    label: "Native HTML mode",
     value: CodeGenTypeEnum.HTML,
   },
   [CodeGenTypeEnum.MULTI_FILE]: {
-    label: 'Native multi-file mode',
+    label: "Native multi-file mode",
     value: CodeGenTypeEnum.MULTI_FILE,
+  },
+  [CodeGenTypeEnum.VUE_PROJECT]: {
+    label: "Vue 项目模式",
+    value: CodeGenTypeEnum.VUE_PROJECT,
   },
 } as const
 
@@ -34,7 +39,7 @@ export const CODE_GEN_TYPE_OPTIONS = Object.values(CODE_GEN_TYPE_CONFIG).map((co
  * @returns Formatted type description
  */
 export const formatCodeGenType = (type: string | undefined): string => {
-  if (!type) return 'Unknown type'
+  if (!type) return "Unknown type"
 
   const config = CODE_GEN_TYPE_CONFIG[type as CodeGenTypeEnum]
   return config ? config.label : type

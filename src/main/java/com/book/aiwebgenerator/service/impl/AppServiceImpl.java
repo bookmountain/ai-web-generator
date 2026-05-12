@@ -11,6 +11,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 import com.book.aiwebgenerator.core.AiCodeGeneratorFacade;
+import com.book.aiwebgenerator.core.builder.VueProjectBuilder;
 import com.book.aiwebgenerator.core.handler.StreamHandlerExecutor;
 import com.book.aiwebgenerator.exception.BusinessException;
 import com.book.aiwebgenerator.exception.ErrorCode;
@@ -54,6 +55,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
     @Resource
     private StreamHandlerExecutor streamHandlerExecutor;
+
+    @Resource
+    private VueProjectBuilder vueProjectBuilder;
 
     @Override
     public AppVO getAppVO(App app) {
@@ -169,21 +173,31 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         if (!sourceDir.exists() || !sourceDir.isDirectory()) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Application code not found, please generate code first");
         }
-        // 7. Copy files to the deployment directory
+        // 7. Build Vue project
+        CodeGenTypeEnum codeGenTypeEnum = CodeGenTypeEnum.getEnumByValue(codeGenType);
+        if (codeGenTypeEnum == CodeGenTypeEnum.VUE_PROJECT) {
+            boolean buildSuccess = vueProjectBuilder.buildProject(sourceDirPath);
+            ThrowUtils.throwIf(!buildSuccess, ErrorCode.SYSTEM_ERROR, "Build Vue project failed");
+            File distDir = new File(sourceDirPath, "dist");
+            ThrowUtils.throwIf(!distDir.exists(), ErrorCode.SYSTEM_ERROR, "Build completed but dist directory was not generated");
+            sourceDir = distDir;
+
+        }
+        // 8. Copy files to the deployment directory
         String deployDirPath = AppConstant.CODE_DEPLOY_ROOT_DIR + File.separator + deployKey;
         try {
             FileUtil.copyContent(sourceDir, new File(deployDirPath), true);
         } catch (Exception e) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Deployment failed: " + e.getMessage());
         }
-        // 8. Update the app's deployKey and deployed time
+        // 9. Update the app's deployKey and deployed time
         App updatedApp = new App();
         updatedApp.setId(appId);
         updatedApp.setDeployKey(deployKey);
         updatedApp.setDeployedTime(LocalDateTime.now());
         boolean updateResult = this.updateById(updatedApp);
         ThrowUtils.throwIf(!updateResult, ErrorCode.OPERATION_ERROR, "Failed to update application deployment info");
-        // 9. Return an accessible URL
+        // 10. Return an accessible URL
         return String.format("%s/%s/", AppConstant.CODE_DEPLOY_HOST, deployKey);
     }
 

@@ -18,11 +18,13 @@ import com.book.aiwebgenerator.model.entity.User;
 import com.book.aiwebgenerator.model.enums.CodeGenTypeEnum;
 import com.book.aiwebgenerator.model.vo.AppVO;
 import com.book.aiwebgenerator.service.AppService;
+import com.book.aiwebgenerator.service.ProjectDownloadService;
 import com.book.aiwebgenerator.service.UserService;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.jspecify.annotations.NonNull;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
@@ -30,6 +32,7 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.io.File;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +47,9 @@ public class AppController {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private ProjectDownloadService projectDownloadService;
 
     @GetMapping(value = "/chat/gen/code", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> chatToGenCode(@RequestParam Long appId, @RequestParam String message, HttpServletRequest request) {
@@ -135,13 +141,41 @@ public class AppController {
     public BaseResponse<String> deployApp(@RequestBody AppDeployRequest appDeployRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(appDeployRequest == null, ErrorCode.PARAMS_ERROR);
         Long appId = appDeployRequest.getAppId();
-        ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR, "应用 ID 不能为空");
+        ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR, "App ID cannot be null");
         User loginUser = userService.getLoginUser(request);
         String deployUrl = appService.deployApp(appId, loginUser);
 
         return ResultUtils.success(deployUrl);
     }
 
+
+    @GetMapping("/download/{appId}")
+    public void downloadAppCode(@PathVariable Long appId,
+                                HttpServletRequest request,
+                                HttpServletResponse response) {
+        // 1. Basic validation
+        ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR, "Invalid app ID");
+        // 2. Query app information
+        App app = appService.getById(appId);
+        ThrowUtils.throwIf(app == null, ErrorCode.NOT_FOUND_ERROR, "App not found");
+        // 3. Permission check: only the app creator can download the code
+        User loginUser = userService.getLoginUser(request);
+        if (!app.getUserId().equals(loginUser.getId())) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "No permission to download this app's code");
+        }
+        // 4. Build the application code directory path (generated directory, not deployment directory)
+        String codeGenType = app.getCodeGenType();
+        String sourceDirName = codeGenType + "_" + appId;
+        String sourceDirPath = AppConstant.CODE_OUTPUT_ROOT_DIR + File.separator + sourceDirName;
+        // 5. Check whether the code directory exists
+        File sourceDir = new File(sourceDirPath);
+        ThrowUtils.throwIf(!sourceDir.exists() || !sourceDir.isDirectory(),
+                ErrorCode.NOT_FOUND_ERROR, "App code does not exist, please generate code first");
+        // 6. Generate download file name (avoid using Chinese characters)
+        String downloadFileName = String.valueOf(appId);
+        // 7. Call the generic download service
+        projectDownloadService.downloadProjectAsZip(sourceDirPath, downloadFileName, response);
+    }
 
     @GetMapping("/get/vo")
     public BaseResponse<AppVO> getAppVOById(long id) {

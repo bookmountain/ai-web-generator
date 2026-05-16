@@ -12,6 +12,19 @@
           </template>
           App details
         </a-button>
+        <a-button
+          type="primary"
+          ghost
+          @click="downloadCode"
+          :loading="downloading"
+          :disabled="!isOwner"
+        >
+          <template #icon>
+            <DownloadOutlined />
+          </template>
+          Download code
+        </a-button>
+
         <a-button type="primary" @click="deployApp" :loading="deploying">
           <template #icon>
             <CloudUploadOutlined />
@@ -58,11 +71,7 @@
         <!-- Message input -->
         <div class="input-container">
           <div class="input-wrapper">
-            <a-tooltip
-              v-if="!isOwner"
-              title="You can only chat on apps you own."
-              placement="top"
-            >
+            <a-tooltip v-if="!isOwner" title="You can only chat on apps you own." placement="top">
               <a-textarea
                 v-model:value="userInput"
                 placeholder="Describe the site you want. More detail usually gives better results."
@@ -526,6 +535,43 @@ const deleteApp = async () => {
   } catch (error) {
     console.error("Delete failed:", error)
     message.error("Delete failed")
+  }
+}
+
+const downloading = ref(false)
+
+const downloadCode = async () => {
+  if (!appId.value) {
+    message.error("App ID is missing")
+    return
+  }
+  downloading.value = true
+  try {
+    const API_BASE_URL = request.defaults.baseURL || ""
+    const url = `${API_BASE_URL}/app/download/${appId.value}`
+    const response = await fetch(url, {
+      method: "GET",
+      credentials: "include",
+    })
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status}`)
+    }
+    const contentDisposition = response.headers.get("Content-Disposition")
+    const fileName = contentDisposition?.match(/filename="(.+)"/)?.[1] || `app-${appId.value}.zip`
+    const blob = await response.blob()
+    const downloadUrl = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = downloadUrl
+    link.download = fileName
+    link.click()
+
+    URL.revokeObjectURL(downloadUrl)
+    message.success("Code downloaded successfully")
+  } catch (error) {
+    console.error("Download failed:", error)
+    message.error("Download failed, please try again")
+  } finally {
+    downloading.value = false
   }
 }
 

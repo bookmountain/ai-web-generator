@@ -23,6 +23,7 @@ import com.book.aiwebgenerator.model.enums.CodeGenTypeEnum;
 import com.book.aiwebgenerator.model.vo.AppVO;
 import com.book.aiwebgenerator.model.vo.UserVO;
 import com.book.aiwebgenerator.service.ChatHistoryService;
+import com.book.aiwebgenerator.service.ScreenshotService;
 import com.book.aiwebgenerator.service.UserService;
 import com.book.aiwebgenerator.constant.AppConstant;
 import com.mybatisflex.core.query.QueryWrapper;
@@ -58,6 +59,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
     @Resource
     private VueProjectBuilder vueProjectBuilder;
+
+    @Resource
+    private ScreenshotService screenshotService;
 
     @Override
     public AppVO getAppVO(App app) {
@@ -198,7 +202,23 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         boolean updateResult = this.updateById(updatedApp);
         ThrowUtils.throwIf(!updateResult, ErrorCode.OPERATION_ERROR, "Failed to update application deployment info");
         // 10. Return an accessible URL
-        return String.format("%s/%s/", AppConstant.CODE_DEPLOY_HOST, deployKey);
+        String appDeployUrl = String.format("%s/%s/", AppConstant.CODE_DEPLOY_HOST, deployKey);
+        // 11. Generate screenshot asynchronously
+        generateAppScreenshotAsync(appId, appDeployUrl);
+
+        return appDeployUrl;
+    }
+
+    @Override
+    public void generateAppScreenshotAsync(Long appId, String appDeployUrl) {
+        Thread.startVirtualThread(() -> {
+            String screenshotUrl = screenshotService.generateAndUploadScreenshot(appDeployUrl);
+            App updatedApp = new App();
+            updatedApp.setId(appId);
+            updatedApp.setCover(screenshotUrl);
+            boolean updated = this.updateById(updatedApp);
+            ThrowUtils.throwIf(!updated, ErrorCode.OPERATION_ERROR, "Failed to update application cover with screenshot URL");
+        });
     }
 
 

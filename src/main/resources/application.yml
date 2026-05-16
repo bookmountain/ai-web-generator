@@ -52,3 +52,13 @@ knife4j:
   enable: true
   setting:
     language: en
+
+# Cloudflare R2 Object Storage Configuration
+r2:
+  public-base-url: https://pub-eaba1320132c41f6b5648ece0ba035a4.r2.dev
+  object-prefix: ai-web-generator
+  client:
+    endpoint: https://b36c45b484aa3fdd762846963ca257a0.r2.cloudflarestorage.com
+    accessKey: your-access-key-id
+    secretKey: your-secret-access-key
+    bucket: ai-web-generator

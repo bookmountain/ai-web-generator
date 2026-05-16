@@ -11,6 +11,13 @@
           <span class="info-label">Created At:</span>
           <span>{{ formatTime(app?.createTime) }}</span>
         </div>
+        <div class="info-item">
+          <span class="info-label">Generation Type:</span>
+          <a-tag v-if="app?.codeGenType" color="blue">
+            {{ formatCodeGenType(app.codeGenType) }}
+          </a-tag>
+          <span v-else>Unknown type</span>
+        </div>
       </div>
 
       <!-- Action bar (visible only to the owner or admin) -->
@@ -42,10 +49,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
-import UserInfo from './UserInfo.vue'
-import { formatTime } from '@/utils/time'
+import { computed } from "vue"
+import { EditOutlined, DeleteOutlined } from "@ant-design/icons-vue"
+import UserInfo from "./UserInfo.vue"
+import { formatTime } from "@/utils/time"
+import { formatCodeGenType } from "@/utils/codeGenTypes"
 
 interface Props {
   open: boolean
@@ -54,9 +62,9 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'update:open', value: boolean): void
-  (e: 'edit'): void
-  (e: 'delete'): void
+  (e: "update:open", value: boolean): void
+  (e: "edit"): void
+  (e: "delete"): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -67,15 +75,15 @@ const emit = defineEmits<Emits>()
 
 const visible = computed({
   get: () => props.open,
-  set: (value) => emit('update:open', value),
+  set: (value) => emit("update:open", value),
 })
 
 const handleEdit = () => {
-  emit('edit')
+  emit("edit")
 }
 
 const handleDelete = () => {
-  emit('delete')
+  emit("delete")
 }
 </script>
 

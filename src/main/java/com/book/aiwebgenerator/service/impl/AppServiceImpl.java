@@ -10,12 +10,14 @@ import java.io.File;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
+import com.book.aiwebgenerator.ai.AiCodeGenTypeRoutingService;
 import com.book.aiwebgenerator.core.AiCodeGeneratorFacade;
 import com.book.aiwebgenerator.core.builder.VueProjectBuilder;
 import com.book.aiwebgenerator.core.handler.StreamHandlerExecutor;
 import com.book.aiwebgenerator.exception.BusinessException;
 import com.book.aiwebgenerator.exception.ErrorCode;
 import com.book.aiwebgenerator.exception.ThrowUtils;
+import com.book.aiwebgenerator.model.dto.app.AppAddRequest;
 import com.book.aiwebgenerator.model.dto.app.AppQueryRequest;
 import com.book.aiwebgenerator.model.entity.User;
 import com.book.aiwebgenerator.model.enums.ChatHistoryMessageTypeEnum;
@@ -62,6 +64,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
     @Resource
     private ScreenshotService screenshotService;
+
+    @Resource
+    private AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService;
 
     @Override
     public AppVO getAppVO(App app) {
@@ -148,6 +153,27 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
         // 7. Collect AI response content and record it to chat history after completion
         return streamHandlerExecutor.doExecute(codeStream, chatHistoryService, appId, loginUser, codeGenTypeEnum);
+    }
+
+    @Override
+    public Long createApp(AppAddRequest appAddRequest, User loginUser) {
+        String initPrompt = appAddRequest.getInitPrompt();
+        ThrowUtils.throwIf(StrUtil.isBlank(initPrompt), ErrorCode.PARAMS_ERROR, "initial prompt cannot be blank");
+
+        App app = new App();
+        BeanUtil.copyProperties(appAddRequest, app);
+        app.setUserId(loginUser.getId());
+        app.setAppName(initPrompt.substring(0, Math.min(initPrompt.length(), 12)));
+
+        // Use AI to choose code generation type
+        CodeGenTypeEnum selectedCodeGenType = aiCodeGenTypeRoutingService.routeCodeGenType(initPrompt);
+        app.setCodeGenType(selectedCodeGenType.getValue());
+
+        boolean result = this.save(app);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        log.info("App created successfully, ID: {}, Type: {}", app.getId(), app.getCodeGenType());
+
+        return app.getId();
     }
 
     @Override

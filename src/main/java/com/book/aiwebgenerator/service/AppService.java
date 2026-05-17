@@ -1,5 +1,6 @@
 package com.book.aiwebgenerator.service;
 
+import com.book.aiwebgenerator.model.dto.app.AppAddRequest;
 import com.book.aiwebgenerator.model.dto.app.AppQueryRequest;
 import com.book.aiwebgenerator.model.entity.User;
 import com.book.aiwebgenerator.model.vo.AppVO;
@@ -19,6 +20,8 @@ public interface AppService extends IService<App> {
     QueryWrapper getQueryWrapper(AppQueryRequest appQueryRequest);
 
     Flux<String> chatToGenCode(Long appId, String message, User loginUser);
+
+    Long createApp(AppAddRequest appAddRequest, User loginUser);
 
     String deployApp(Long appId, User loginUser);
 

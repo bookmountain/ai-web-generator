@@ -88,7 +88,7 @@ const router = createRouter({
 ## Website Content Requirements
 
 - Basic layout: All pages must share a unified layout and include a navigation bar; the homepage content must be especially rich.
-- Text content: Use real, meaningful Chinese text content.
+- Text content: Use real, meaningful English text content.
 - Image resources: Use `https://picsum.photos` or other reliable placeholders.
 - Sample data: Provide realistic mock data for practical demonstrations.
 

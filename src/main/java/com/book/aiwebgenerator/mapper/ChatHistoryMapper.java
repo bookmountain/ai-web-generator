@@ -4,7 +4,7 @@ import com.mybatisflex.core.BaseMapper;
 import com.book.aiwebgenerator.model.entity.ChatHistory;
 
 /**
- * chat history 映射层。
+ * Chat history mapper.
  *
  */
 public interface ChatHistoryMapper extends BaseMapper<ChatHistory> {

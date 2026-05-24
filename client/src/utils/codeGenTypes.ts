@@ -20,7 +20,7 @@ export const CODE_GEN_TYPE_CONFIG = {
     value: CodeGenTypeEnum.MULTI_FILE,
   },
   [CodeGenTypeEnum.VUE_PROJECT]: {
-    label: "Vue 项目模式",
+    label: "Vue project mode",
     value: CodeGenTypeEnum.VUE_PROJECT,
   },
 } as const

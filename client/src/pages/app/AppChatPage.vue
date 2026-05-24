@@ -27,7 +27,6 @@
           </template>
           Download code
         </a-button>
-
         <a-button type="primary" @click="deployApp" :loading="deploying">
           <template #icon>
             <CloudUploadOutlined />
@@ -41,9 +40,7 @@
     <div class="main-content">
       <!-- Chat column -->
       <div class="chat-section">
-        <!-- Messages -->
         <div class="messages-container" ref="messagesContainer">
-          <!-- Load more -->
           <div v-if="hasMoreHistory" class="load-more-container">
             <a-button type="link" @click="loadMoreHistory" :loading="loadingHistory" size="small">
               Load more history
@@ -71,13 +68,49 @@
           </div>
         </div>
 
-        <!-- Message input -->
+        <a-alert
+          v-if="selectedElementInfo"
+          class="selected-element-alert"
+          type="info"
+          closable
+          @close="clearSelectedElement"
+        >
+          <template #message>
+            <div class="selected-element-info">
+              <div class="element-header">
+                <span class="element-tag">
+                  Selected element: {{ selectedElementInfo.tagName.toLowerCase() }}
+                </span>
+                <span v-if="selectedElementInfo.id" class="element-id">
+                  #{{ selectedElementInfo.id }}
+                </span>
+                <span v-if="selectedElementInfo.className" class="element-class">
+                  .{{ selectedElementInfo.className.split(" ").join(".") }}
+                </span>
+              </div>
+              <div class="element-details">
+                <div v-if="selectedElementInfo.textContent" class="element-item">
+                  Content: {{ selectedElementInfo.textContent.substring(0, 50) }}
+                  {{ selectedElementInfo.textContent.length > 50 ? "..." : "" }}
+                </div>
+                <div v-if="selectedElementInfo.pagePath" class="element-item">
+                  Page path: {{ selectedElementInfo.pagePath }}
+                </div>
+                <div class="element-item">
+                  Selector:
+                  <code class="element-selector-code">{{ selectedElementInfo.selector }}</code>
+                </div>
+              </div>
+            </div>
+          </template>
+        </a-alert>
+
         <div class="input-container">
           <div class="input-wrapper">
             <a-tooltip v-if="!isOwner" title="You can only chat on apps you own." placement="top">
               <a-textarea
                 v-model:value="userInput"
-                placeholder="Describe the site you want. More detail usually gives better results."
+                :placeholder="getInputPlaceholder()"
                 :rows="4"
                 :maxlength="1000"
                 @keydown.enter.prevent="sendMessage"
@@ -87,7 +120,7 @@
             <a-textarea
               v-else
               v-model:value="userInput"
-              placeholder="Describe the site you want. More detail usually gives better results."
+              :placeholder="getInputPlaceholder()"
               :rows="4"
               :maxlength="1000"
               @keydown.enter.prevent="sendMessage"
@@ -113,6 +146,19 @@
         <div class="preview-header">
           <h3>Generated site preview</h3>
           <div class="preview-actions">
+            <a-button
+              v-if="isOwner && previewUrl"
+              type="link"
+              :danger="isEditMode"
+              @click="toggleEditMode"
+              :class="{ 'edit-mode-active': isEditMode }"
+              style="padding: 0; height: auto; margin-right: 12px"
+            >
+              <template #icon>
+                <EditOutlined />
+              </template>
+              {{ isEditMode ? "Exit edit" : "Edit mode" }}
+            </a-button>
             <a-button v-if="previewUrl" type="link" @click="openInNewTab">
               <template #icon>
                 <ExportOutlined />
@@ -141,7 +187,6 @@
       </div>
     </div>
 
-    <!-- App detail modal -->
     <AppDetailModal
       v-model:open="appDetailVisible"
       :app="appInfo"
@@ -150,7 +195,6 @@
       @delete="deleteApp"
     />
 
-    <!-- Deploy success modal -->
     <DeploySuccessModal
       v-model:open="deployModalVisible"
       :deploy-url="deployUrl"
@@ -178,12 +222,15 @@ import AppDetailModal from "@/components/AppDetailModal.vue"
 import DeploySuccessModal from "@/components/DeploySuccessModal.vue"
 import aiAvatar from "@/assets/logo.jpg"
 import { API_BASE_URL, getStaticPreviewUrl } from "@/config/env"
+import { VisualEditor, type ElementInfo } from "@/utils/visualEditor"
 
 import {
   CloudUploadOutlined,
   SendOutlined,
   ExportOutlined,
   InfoCircleOutlined,
+  DownloadOutlined,
+  EditOutlined,
 } from "@ant-design/icons-vue"
 
 const route = useRoute()
@@ -205,7 +252,6 @@ interface Message {
 const messages = ref<Message[]>([])
 const userInput = ref("")
 const isGenerating = ref(false)
-const currentEventSource = ref<EventSource | null>(null)
 const messagesContainer = ref<HTMLElement>()
 
 // Chat history pagination
@@ -222,6 +268,18 @@ const previewReady = ref(false)
 const deploying = ref(false)
 const deployModalVisible = ref(false)
 const deployUrl = ref("")
+
+// Download
+const downloading = ref(false)
+
+// Visual editor
+const isEditMode = ref(false)
+const selectedElementInfo = ref<ElementInfo | null>(null)
+const visualEditor = new VisualEditor({
+  onElementSelected: (elementInfo: ElementInfo) => {
+    selectedElementInfo.value = elementInfo
+  },
+})
 
 // Permissions
 const isOwner = computed(() => {
@@ -347,13 +405,30 @@ const sendMessage = async () => {
     return
   }
 
-  const message = userInput.value.trim()
+  let message = userInput.value.trim()
+  if (selectedElementInfo.value) {
+    let elementContext = `\n\nSelected element:`
+    if (selectedElementInfo.value.pagePath) {
+      elementContext += `\n- Page path: ${selectedElementInfo.value.pagePath}`
+    }
+    elementContext += `\n- Tag: ${selectedElementInfo.value.tagName.toLowerCase()}\n- Selector: ${selectedElementInfo.value.selector}`
+    if (selectedElementInfo.value.textContent) {
+      elementContext += `\n- Current content: ${selectedElementInfo.value.textContent.substring(0, 100)}`
+    }
+    message += elementContext
+  }
   userInput.value = ""
-
   messages.value.push({
     type: "user",
     content: message,
   })
+
+  if (selectedElementInfo.value) {
+    clearSelectedElement()
+    if (isEditMode.value) {
+      toggleEditMode()
+    }
+  }
 
   const aiMessageIndex = messages.value.length
   messages.value.push({
@@ -373,16 +448,7 @@ const generateCode = async (userMessage: string, aiMessageIndex: number) => {
   let eventSource: EventSource | null = null
   let streamCompleted = false
 
-  const closeEventSource = () => {
-    eventSource?.close()
-    if (currentEventSource.value === eventSource) {
-      currentEventSource.value = null
-    }
-  }
-
   try {
-    currentEventSource.value?.close()
-
     const baseURL = request.defaults.baseURL || API_BASE_URL
 
     const params = new URLSearchParams({
@@ -395,7 +461,6 @@ const generateCode = async (userMessage: string, aiMessageIndex: number) => {
     eventSource = new EventSource(url, {
       withCredentials: true,
     })
-    currentEventSource.value = eventSource
 
     let fullContent = ""
 
@@ -414,8 +479,6 @@ const generateCode = async (userMessage: string, aiMessageIndex: number) => {
         }
       } catch (error) {
         console.error("Failed to parse message:", error)
-        streamCompleted = true
-        closeEventSource()
         handleError(error, aiMessageIndex)
       }
     }
@@ -425,7 +488,7 @@ const generateCode = async (userMessage: string, aiMessageIndex: number) => {
 
       streamCompleted = true
       isGenerating.value = false
-      closeEventSource()
+      eventSource?.close()
 
       setTimeout(async () => {
         await fetchAppInfo()
@@ -434,18 +497,22 @@ const generateCode = async (userMessage: string, aiMessageIndex: number) => {
     })
 
     eventSource.onerror = function () {
-      if (streamCompleted || !isGenerating.value) {
-        closeEventSource()
-        return
-      }
+      if (streamCompleted || !isGenerating.value) return
+      if (eventSource?.readyState === EventSource.CONNECTING) {
+        streamCompleted = true
+        isGenerating.value = false
+        eventSource?.close()
 
-      streamCompleted = true
-      closeEventSource()
-      handleError(new Error("SSE connection error"), aiMessageIndex)
+        setTimeout(async () => {
+          await fetchAppInfo()
+          updatePreview()
+        }, 1000)
+      } else {
+        handleError(new Error("SSE connection error"), aiMessageIndex)
+      }
     }
   } catch (error) {
     console.error("Failed to create EventSource:", error)
-    closeEventSource()
     handleError(error, aiMessageIndex)
   }
 }
@@ -471,6 +538,40 @@ const updatePreview = () => {
 const scrollToBottom = () => {
   if (messagesContainer.value) {
     messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+  }
+}
+
+const downloadCode = async () => {
+  if (!appId.value) {
+    message.error("App ID is missing")
+    return
+  }
+  downloading.value = true
+  try {
+    const API_BASE_URL = request.defaults.baseURL || ""
+    const url = `${API_BASE_URL}/app/download/${appId.value}`
+    const response = await fetch(url, {
+      method: "GET",
+      credentials: "include",
+    })
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status}`)
+    }
+    const contentDisposition = response.headers.get("Content-Disposition")
+    const fileName = contentDisposition?.match(/filename="(.+)"/)?.[1] || `app-${appId.value}.zip`
+    const blob = await response.blob()
+    const downloadUrl = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = downloadUrl
+    link.download = fileName
+    link.click()
+    URL.revokeObjectURL(downloadUrl)
+    message.success("Code downloaded")
+  } catch (error) {
+    console.error("Download failed:", error)
+    message.error("Download failed. Please try again.")
+  } finally {
+    downloading.value = false
   }
 }
 
@@ -515,6 +616,11 @@ const openDeployedSite = () => {
 
 const onIframeLoad = () => {
   previewReady.value = true
+  const iframe = document.querySelector(".preview-iframe") as HTMLIFrameElement
+  if (iframe) {
+    visualEditor.init(iframe)
+    visualEditor.onIframeLoad()
+  }
 }
 
 const editApp = () => {
@@ -541,50 +647,42 @@ const deleteApp = async () => {
   }
 }
 
-const downloading = ref(false)
-
-const downloadCode = async () => {
-  if (!appId.value) {
-    message.error("App ID is missing")
+const toggleEditMode = () => {
+  const iframe = document.querySelector(".preview-iframe") as HTMLIFrameElement
+  if (!iframe) {
+    message.warning("Please wait for the page to finish loading")
     return
   }
-  downloading.value = true
-  try {
-    const API_BASE_URL = request.defaults.baseURL || ""
-    const url = `${API_BASE_URL}/app/download/${appId.value}`
-    const response = await fetch(url, {
-      method: "GET",
-      credentials: "include",
-    })
-    if (!response.ok) {
-      throw new Error(`Download failed: ${response.status}`)
-    }
-    const contentDisposition = response.headers.get("Content-Disposition")
-    const fileName = contentDisposition?.match(/filename="(.+)"/)?.[1] || `app-${appId.value}.zip`
-    const blob = await response.blob()
-    const downloadUrl = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = downloadUrl
-    link.download = fileName
-    link.click()
-
-    URL.revokeObjectURL(downloadUrl)
-    message.success("Code downloaded successfully")
-  } catch (error) {
-    console.error("Download failed:", error)
-    message.error("Download failed, please try again")
-  } finally {
-    downloading.value = false
+  if (!previewReady.value) {
+    message.warning("Please wait for the page to finish loading")
+    return
   }
+  const newEditMode = visualEditor.toggleEditMode()
+  isEditMode.value = newEditMode
+}
+
+const clearSelectedElement = () => {
+  selectedElementInfo.value = null
+  visualEditor.clearSelection()
+}
+
+const getInputPlaceholder = () => {
+  if (selectedElementInfo.value) {
+    return `Editing <${selectedElementInfo.value.tagName.toLowerCase()}> — describe the changes you want...`
+  }
+  return "Describe the site you want. More detail usually gives better results."
 }
 
 onMounted(() => {
   fetchAppInfo()
+
+  window.addEventListener("message", (event) => {
+    visualEditor.handleIframeMessage(event)
+  })
 })
 
 onUnmounted(() => {
-  currentEventSource.value?.close()
-  currentEventSource.value = null
+  // EventSource is closed when the stream completes or errors
 })
 </script>
 
@@ -609,6 +707,10 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.code-gen-type-tag {
+  font-size: 12px;
 }
 
 .app-name {
@@ -644,7 +746,7 @@ onUnmounted(() => {
 }
 
 .messages-container {
-  flex: 1;
+  flex: 0.9;
   padding: 16px;
   overflow-y: auto;
   scroll-behavior: smooth;
@@ -793,6 +895,10 @@ onUnmounted(() => {
   border: none;
 }
 
+.selected-element-alert {
+  margin: 0 16px;
+}
+
 @media (max-width: 1024px) {
   .main-content {
     flex-direction: column;
@@ -823,8 +929,67 @@ onUnmounted(() => {
     max-width: 85%;
   }
 
-  .code-gen-type-tag {
+  .selected-element-alert {
+    margin: 0 16px;
+  }
+
+  .selected-element-info {
+    line-height: 1.4;
+  }
+
+  .element-header {
+    margin-bottom: 8px;
+  }
+
+  .element-details {
+    margin-top: 8px;
+  }
+
+  .element-item {
+    margin-bottom: 4px;
+    font-size: 13px;
+  }
+
+  .element-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .element-tag {
+    font-family: "Monaco", "Menlo", monospace;
+    font-size: 14px;
+    font-weight: 600;
+    color: #007bff;
+  }
+
+  .element-id {
+    color: #28a745;
+    margin-left: 4px;
+  }
+
+  .element-class {
+    color: #ffc107;
+    margin-left: 4px;
+  }
+
+  .element-selector-code {
+    font-family: "Monaco", "Menlo", monospace;
+    background: #f6f8fa;
+    padding: 2px 4px;
+    border-radius: 3px;
     font-size: 12px;
+    color: #d73a49;
+    border: 1px solid #e1e4e8;
+  }
+
+  .edit-mode-active {
+    background-color: #52c41a !important;
+    border-color: #52c41a !important;
+    color: white !important;
+  }
+
+  .edit-mode-active:hover {
+    background-color: #73d13d !important;
+    border-color: #73d13d !important;
   }
 }
 </style>

@@ -114,3 +114,15 @@ Ensure the generated project can:
 2. Start the development server and run normally with `npm run dev`
 3. Successfully build the production version with `npm run build`
 4. Be deployed and accessed correctly under any subpath after build
+
+## Important Notes
+
+After generating code, the user may request modifications and specify which elements need to be changed.
+1) You must apply the requested changes exactly as specified; do not make any modifications beyond what the user requested.
+2) You must use the available tools to perform the modifications, rather than re-outputting all files or providing the user with instructions to make the changes themselves:
+   1. First use the directory-reading tool to understand the current project structure.
+   2. Use the file-reading tool to inspect the contents of the files that need modification.
+   3. Based on the user's request, use the appropriate tool to make the changes:
+      - File modification tool: change parts of existing files.
+      - File write tool: create new files or completely overwrite files.
+      - File delete tool: remove files that are no longer needed.

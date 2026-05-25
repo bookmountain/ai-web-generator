@@ -1,10 +1,13 @@
 package com.book.aiwebgenerator.ai.tools;
 
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.json.JSONObject;
 import com.book.aiwebgenerator.constant.AppConstant;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.ToolMemoryId;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -13,7 +16,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
 @Slf4j
-public class FileWriteTool {
+@Component
+public class FileWriteTool extends BaseTool {
 
     @Tool("Write file to designated path")
     public String writeFile(@P("Relative path of the file") String relativeFilePath,
@@ -45,5 +49,28 @@ public class FileWriteTool {
             return errorMessage;
         }
 
+    }
+
+    @Override
+    public String getToolName() {
+        return "writeFile";
+    }
+
+    @Override
+    public String getDisplayName() {
+        return "Write File";
+    }
+
+    @Override
+    public String generateToolExecutedResult(JSONObject arguments) {
+        String relativeFilePath = arguments.getStr("relativeFilePath");
+        String suffix = FileUtil.getSuffix(relativeFilePath);
+        String content = arguments.getStr("content");
+        return String.format("""
+                [Tool invocation] %s %s
+                ```%s
+                %s
+                ```
+                """, getDisplayName(), relativeFilePath, suffix, content);
     }
 }

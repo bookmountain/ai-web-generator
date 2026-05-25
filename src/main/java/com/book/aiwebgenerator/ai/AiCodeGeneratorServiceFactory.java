@@ -1,6 +1,6 @@
 package com.book.aiwebgenerator.ai;
 
-import com.book.aiwebgenerator.ai.tools.FileWriteTool;
+import com.book.aiwebgenerator.ai.tools.*;
 import com.book.aiwebgenerator.exception.BusinessException;
 import com.book.aiwebgenerator.exception.ErrorCode;
 import com.book.aiwebgenerator.model.entity.ChatHistory;
@@ -44,6 +44,10 @@ public class AiCodeGeneratorServiceFactory {
     @Resource
     private ChatHistoryService chatHistoryService;
 
+    @Resource
+    private ToolManager toolManager;
+
+
     private final Cache<String, AiCodeGeneratorService> serviceCache = Caffeine.newBuilder()
             .maximumSize(1000)
             .expireAfterWrite(Duration.ofMinutes(30))
@@ -83,7 +87,7 @@ public class AiCodeGeneratorServiceFactory {
                     .streamingChatModel(openAiStreamingChatModel)
                     .chatMemory(chatMemory)
                     .chatMemoryProvider(memoryId -> chatMemory)
-                    .tools(new FileWriteTool())
+                    .tools(toolManager.getAllTools())
                     .hallucinatedToolNameStrategy(toolExecutionRequest ->
                             ToolExecutionResultMessage.from(toolExecutionRequest, "Error: there is no tool called " + toolExecutionRequest.name()))
                     .build();

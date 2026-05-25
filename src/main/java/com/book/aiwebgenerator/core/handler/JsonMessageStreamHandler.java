@@ -5,6 +5,8 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.book.aiwebgenerator.ai.model.message.*;
+import com.book.aiwebgenerator.ai.tools.BaseTool;
+import com.book.aiwebgenerator.ai.tools.ToolManager;
 import com.book.aiwebgenerator.constant.AppConstant;
 import com.book.aiwebgenerator.core.builder.VueProjectBuilder;
 import com.book.aiwebgenerator.model.entity.User;
@@ -28,6 +30,9 @@ public class JsonMessageStreamHandler {
 
     @Resource
     private VueProjectBuilder vueProjectBuilder;
+
+    @Resource
+    private ToolManager toolManager;
 
     /**
      * Handle TokenStream (VUE_PROJECT)
@@ -84,11 +89,14 @@ public class JsonMessageStreamHandler {
             case TOOL_REQUEST -> {
                 ToolRequestMessage toolRequestMessage = JSONUtil.toBean(chunk, ToolRequestMessage.class);
                 String toolId = toolRequestMessage.getId();
+                String toolName = toolRequestMessage.getName();
                 // Check whether this is the first time seeing this tool ID
                 if (toolId != null && !seenToolIds.contains(toolId)) {
                     // First time this tool is called, record the ID and return the full tool info
                     seenToolIds.add(toolId);
-                    return "\n\n[Select tool] Write file\n\n";
+                    BaseTool tool = toolManager.getTool(toolName);
+
+                    return tool.generateToolRequestResponse();
                 } else {
                     // Not the first time seeing this tool ID, return empty directly
                     return "";
@@ -97,15 +105,9 @@ public class JsonMessageStreamHandler {
             case TOOL_EXECUTED -> {
                 ToolExecutedMessage toolExecutedMessage = JSONUtil.toBean(chunk, ToolExecutedMessage.class);
                 JSONObject jsonObject = JSONUtil.parseObj(toolExecutedMessage.getArguments());
-                String relativeFilePath = jsonObject.getStr("relativeFilePath");
-                String suffix = FileUtil.getSuffix(relativeFilePath);
-                String content = jsonObject.getStr("content");
-                String result = String.format("""
-                        [Tool call] Write file %s
-                        ```%s
-                        %s
-                        ```
-                        """, relativeFilePath, suffix, content);
+                String toolName = toolExecutedMessage.getName();
+                BaseTool tool = toolManager.getTool(toolName);
+                String result = tool.generateToolExecutedResult(jsonObject);
                 // Output both to the frontend and the content to persist
                 String output = String.format("\n\n%s\n\n", result);
                 chatHistoryStringBuilder.append(output);

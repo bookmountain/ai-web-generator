@@ -1,5 +1,6 @@
 package com.book.aiwebgenerator.langgraph4j.state;
 
+import com.book.aiwebgenerator.langgraph4j.model.ImageCollectionPlan;
 import com.book.aiwebgenerator.langgraph4j.model.ImageResource;
 import com.book.aiwebgenerator.langgraph4j.model.QualityResult;
 import com.book.aiwebgenerator.model.enums.CodeGenTypeEnum;
@@ -70,6 +71,20 @@ public class WorkflowContext implements Serializable {
      */
     private String errorMessage;
 
+    /**
+     * Image collection plan
+     */
+    private ImageCollectionPlan imageCollectionPlan;
+
+    /**
+     * Intermediate result fields for concurrent image collection
+     */
+    private List<ImageResource> contentImages;
+    private List<ImageResource> illustrations;
+    private List<ImageResource> diagrams;
+    private List<ImageResource> logos;
+
+
     // ========== Context Operation Methods ==========
 
     /**
@@ -84,5 +99,8 @@ public class WorkflowContext implements Serializable {
      */
     public static Map<String, Object> saveContext(WorkflowContext context) {
         return Map.of(WORKFLOW_CONTEXT_KEY, context);
+    }
+
+    public void setImageCollectionPlan(ImageCollectionPlan plan) {
     }
 }

@@ -1,5 +1,8 @@
 package com.book.aiwebgenerator.config;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.langchain4j.exception.HttpException;
 import dev.langchain4j.http.client.HttpClient;
 import dev.langchain4j.http.client.HttpClientBuilder;
@@ -76,14 +79,17 @@ public class DeepSeekChatHttpClientConfig {
 
     private record JdkRestClient(RestClient delegate) implements HttpClient {
 
+        private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
         @Override
         public SuccessfulHttpResponse execute(HttpRequest request) throws HttpException {
+            HttpRequest effectiveRequest = disableThinkingForDeepSeekV4(request);
             RestClient.RequestBodySpec spec = (RestClient.RequestBodySpec) delegate
-                    .method(HttpMethod.valueOf(request.method().name()))
-                    .uri(request.url())
-                    .headers(headers -> request.headers().forEach(headers::addAll));
-            if (request.body() != null) {
-                spec.body(request.body());
+                    .method(HttpMethod.valueOf(effectiveRequest.method().name()))
+                    .uri(effectiveRequest.url())
+                    .headers(headers -> effectiveRequest.headers().forEach(headers::addAll));
+            if (effectiveRequest.body() != null) {
+                spec.body(effectiveRequest.body());
             }
             ResponseEntity<String> response = spec.retrieve().toEntity(String.class);
             return SuccessfulHttpResponse.builder()
@@ -91,6 +97,36 @@ public class DeepSeekChatHttpClientConfig {
                     .headers(response.getHeaders())
                     .body(response.getBody())
                     .build();
+        }
+
+        private HttpRequest disableThinkingForDeepSeekV4(HttpRequest request) {
+            String body = request.body();
+            if (body == null || body.isBlank()) {
+                return request;
+            }
+            try {
+                JsonNode root = OBJECT_MAPPER.readTree(body);
+                if (!(root instanceof ObjectNode requestBody)) {
+                    return request;
+                }
+                JsonNode modelNode = requestBody.get("model");
+                if (modelNode == null || !modelNode.asText("").startsWith("deepseek-v4-")) {
+                    return request;
+                }
+                if (!requestBody.has("thinking")) {
+                    ObjectNode thinking = OBJECT_MAPPER.createObjectNode();
+                    thinking.put("type", "disabled");
+                    requestBody.set("thinking", thinking);
+                }
+                return HttpRequest.builder()
+                        .method(request.method())
+                        .url(request.url())
+                        .headers(request.headers())
+                        .body(OBJECT_MAPPER.writeValueAsString(requestBody))
+                        .build();
+            } catch (Exception ignored) {
+                return request;
+            }
         }
 
         @Override

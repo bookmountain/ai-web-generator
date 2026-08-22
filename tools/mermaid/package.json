@@ -1,0 +1,7 @@
+{
+  "name": "ai-web-generator-mermaid-renderer",
+  "private": true,
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "11.12.0"
+  }
+}

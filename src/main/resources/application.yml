@@ -62,3 +62,6 @@ r2:
     accessKey: your-access-key-id
     secretKey: your-secret-access-key
     bucket: ai-web-generator
+
+pexels:
+  api-key: <YOUR-API-KEY>

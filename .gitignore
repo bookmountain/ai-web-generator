@@ -36,3 +36,7 @@ build/
 application-local.yml
 tmp
 .claude
+
+### Project-managed Mermaid runtime ###
+tools/mermaid/node/
+tools/mermaid/node_modules/

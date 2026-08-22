@@ -8,7 +8,6 @@ import com.book.aiwebgenerator.service.ScreenshotService;
 import com.book.aiwebgenerator.utils.WebScreenshotUtils;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -21,12 +20,6 @@ public class ScreenshotServiceImpl implements ScreenshotService {
 
     @Resource
     private R2Manager r2Manager;
-
-    @Value("${r2.public-base-url}")
-    private String r2PublicBaseUrl;
-
-    @Value("${r2.object-prefix:}")
-    private String r2ObjectPrefix;
 
     @Override
     public String generateAndUploadScreenshot(String webUrl) {
@@ -66,26 +59,14 @@ public class ScreenshotServiceImpl implements ScreenshotService {
         }
 
         String fileName = UUID.randomUUID().toString().substring(0, 8) + "_compressed.jpg";
-        String objectKey = buildObjectKey(fileName);
+        String objectKey = generateScreenshotKey(fileName);
 
-        // Upload still uses API credentials/endpoint inside R2Manager
         String uploadResult = r2Manager.uploadFile(objectKey, screenshotFile);
         if (StrUtil.isBlank(uploadResult)) {
             log.error("Failed to upload screenshot to R2, key={}", objectKey);
             return null;
         }
-
-        // Return public URL for frontend display
-        return joinUrl(r2PublicBaseUrl, objectKey);
-    }
-
-    private String buildObjectKey(String fileName) {
-        String screenshotKey = generateScreenshotKey(fileName);
-        if (StrUtil.isBlank(r2ObjectPrefix)) {
-            return screenshotKey;
-        }
-        String normalizedPrefix = StrUtil.removePrefix(StrUtil.removeSuffix(r2ObjectPrefix.trim(), "/"), "/");
-        return normalizedPrefix + "/" + screenshotKey;
+        return uploadResult;
     }
 
     /**
@@ -95,12 +76,6 @@ public class ScreenshotServiceImpl implements ScreenshotService {
     private String generateScreenshotKey(String fileName) {
         String datePath = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
         return String.format("screenshots/%s/%s", datePath, fileName);
-    }
-
-    private String joinUrl(String baseUrl, String path) {
-        String normalizedBase = StrUtil.removeSuffix(baseUrl, "/");
-        String normalizedPath = StrUtil.removePrefix(path, "/");
-        return normalizedBase + "/" + normalizedPath;
     }
 
     private void cleanupLocalFile(String localFilePath) {

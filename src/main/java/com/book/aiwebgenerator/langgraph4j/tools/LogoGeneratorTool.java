@@ -23,7 +23,7 @@ import java.util.List;
 @Component
 public class LogoGeneratorTool {
 
-    @Resource
+    @Resource(name = "openAiChatModel")
     private ChatModel chatModel;
 
     @Resource

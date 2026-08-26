@@ -35,6 +35,23 @@ langchain4j:
       log-requests: true
       log-responses: true
 
+    # Reasoning AI model configuration (used for complex reasoning tasks)
+    reasoning-streaming-chat-model:
+      base-url: https://api.deepseek.com
+      api-key: <Your API Key>
+      model-name: deepseek-reasoner
+      max-tokens: 32768
+      temperature: 0.1
+      log-requests: true
+      log-responses: true
+    # Smart routing AI model configuration (used for simple classification tasks)
+    routing-chat-model:
+      base-url: https://api.deepseek.com
+      api-key: <Your API Key>
+      model-name: deepseek-chat
+      log-requests: true
+      log-responses: true
+
 server:
   port: 8123
   servlet:

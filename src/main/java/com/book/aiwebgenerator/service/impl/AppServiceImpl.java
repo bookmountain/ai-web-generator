@@ -2,42 +2,41 @@ package com.book.aiwebgenerator.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RandomUtil;
-
-import java.io.File;
-import java.io.Serializable;
-import java.time.LocalDateTime;
-
+import cn.hutool.core.util.StrUtil;
 import com.book.aiwebgenerator.ai.AiCodeGenTypeRoutingService;
+import com.book.aiwebgenerator.ai.AiCodeGenTypeRoutingServiceFactory;
+import com.book.aiwebgenerator.constant.AppConstant;
 import com.book.aiwebgenerator.core.AiCodeGeneratorFacade;
 import com.book.aiwebgenerator.core.builder.VueProjectBuilder;
 import com.book.aiwebgenerator.core.handler.StreamHandlerExecutor;
 import com.book.aiwebgenerator.exception.BusinessException;
 import com.book.aiwebgenerator.exception.ErrorCode;
 import com.book.aiwebgenerator.exception.ThrowUtils;
+import com.book.aiwebgenerator.mapper.AppMapper;
 import com.book.aiwebgenerator.model.dto.app.AppAddRequest;
 import com.book.aiwebgenerator.model.dto.app.AppQueryRequest;
+import com.book.aiwebgenerator.model.entity.App;
 import com.book.aiwebgenerator.model.entity.User;
 import com.book.aiwebgenerator.model.enums.ChatHistoryMessageTypeEnum;
 import com.book.aiwebgenerator.model.enums.CodeGenTypeEnum;
 import com.book.aiwebgenerator.model.vo.AppVO;
 import com.book.aiwebgenerator.model.vo.UserVO;
+import com.book.aiwebgenerator.service.AppService;
 import com.book.aiwebgenerator.service.ChatHistoryService;
 import com.book.aiwebgenerator.service.ScreenshotService;
 import com.book.aiwebgenerator.service.UserService;
-import com.book.aiwebgenerator.constant.AppConstant;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
-import com.book.aiwebgenerator.model.entity.App;
-import com.book.aiwebgenerator.mapper.AppMapper;
-import com.book.aiwebgenerator.service.AppService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
+import java.io.File;
+import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -66,7 +65,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
     private ScreenshotService screenshotService;
 
     @Resource
-    private AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService;
+    private AiCodeGenTypeRoutingServiceFactory aiCodeGenTypeRoutingServiceFactory;
 
     @Override
     public AppVO getAppVO(App app) {
@@ -165,8 +164,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         app.setUserId(loginUser.getId());
         app.setAppName(initPrompt.substring(0, Math.min(initPrompt.length(), 12)));
 
-        // Use AI to choose code generation type
-        CodeGenTypeEnum selectedCodeGenType = aiCodeGenTypeRoutingService.routeCodeGenType(initPrompt);
+        // Use AI to intelligently select the code generation type (prototype pattern)
+        AiCodeGenTypeRoutingService routingService = aiCodeGenTypeRoutingServiceFactory.createAiCodeGenTypeRoutingService();
+        CodeGenTypeEnum selectedCodeGenType = routingService.routeCodeGenType(initPrompt);
         app.setCodeGenType(selectedCodeGenType.getValue());
 
         boolean result = this.save(app);

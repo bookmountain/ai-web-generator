@@ -1,11 +1,11 @@
 package com.book.aiwebgenerator.ai;
 
-import com.book.aiwebgenerator.ai.tools.*;
+import com.book.aiwebgenerator.ai.tools.ToolManager;
 import com.book.aiwebgenerator.exception.BusinessException;
 import com.book.aiwebgenerator.exception.ErrorCode;
-import com.book.aiwebgenerator.model.entity.ChatHistory;
 import com.book.aiwebgenerator.model.enums.CodeGenTypeEnum;
 import com.book.aiwebgenerator.service.ChatHistoryService;
+import com.book.aiwebgenerator.utils.SpringContextUtil;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import dev.langchain4j.community.store.memory.chat.redis.RedisChatMemoryStore;
@@ -28,26 +28,6 @@ public class AiCodeGeneratorServiceFactory {
     private static final int DEFAULT_CHAT_MEMORY_MAX_MESSAGES = 20;
     private static final int VUE_PROJECT_CHAT_MEMORY_MAX_MESSAGES = 100;
     private static final int CHAT_HISTORY_LOAD_COUNT = 20;
-
-    @Resource
-    private ChatModel chatModel;
-
-    @Resource
-    private StreamingChatModel openAiStreamingChatModel;
-
-    @Resource
-    private StreamingChatModel reasoningStreamingChatModel;
-
-    @Resource
-    private RedisChatMemoryStore redisChatMemoryStore;
-
-    @Resource
-    private ChatHistoryService chatHistoryService;
-
-    @Resource
-    private ToolManager toolManager;
-
-
     private final Cache<String, AiCodeGeneratorService> serviceCache = Caffeine.newBuilder()
             .maximumSize(1000)
             .expireAfterWrite(Duration.ofMinutes(30))
@@ -56,6 +36,14 @@ public class AiCodeGeneratorServiceFactory {
                 log.debug("AI service instance has been removed，cacheKey: {}, cause: {}", key, cause);
             })
             .build();
+    @Resource(name = "openAiChatModel")
+    private ChatModel chatModel;
+    @Resource
+    private RedisChatMemoryStore redisChatMemoryStore;
+    @Resource
+    private ChatHistoryService chatHistoryService;
+    @Resource
+    private ToolManager toolManager;
 
     public AiCodeGeneratorService getAiCodeGeneratorService(long appId) {
         return getAiCodeGeneratorService(appId, CodeGenTypeEnum.HTML);
@@ -80,25 +68,31 @@ public class AiCodeGeneratorServiceFactory {
         // Load chat history to memory from database
         chatHistoryService.loadChatHistoryToMemory(appId, chatMemory, CHAT_HISTORY_LOAD_COUNT);
 
+// Select different model configurations based on the code generation type
         return switch (codeGenType) {
-            // Vue project use tool calling and reasoner model
-            case VUE_PROJECT -> AiServices.builder(AiCodeGeneratorService.class)
-                    .chatModel(chatModel)
-                    .streamingChatModel(openAiStreamingChatModel)
-                    .chatMemory(chatMemory)
-                    .chatMemoryProvider(memoryId -> chatMemory)
-                    .tools(toolManager.getAllTools())
-                    .hallucinatedToolNameStrategy(toolExecutionRequest ->
-                            ToolExecutionResultMessage.from(toolExecutionRequest, "Error: there is no tool called " + toolExecutionRequest.name()))
-                    .build();
-            case HTML, MULTI_FILE -> AiServices.builder(AiCodeGeneratorService.class)
-                    .chatModel(chatModel)
-                    .streamingChatModel(openAiStreamingChatModel)
-                    .chatMemory(chatMemory)
-                    .build();
+            case VUE_PROJECT -> {
+                // Use prototype-scoped StreamingChatModel to solve concurrency issues
+                StreamingChatModel reasoningStreamingChatModel = SpringContextUtil.getBean("reasoningStreamingChatModelPrototype", StreamingChatModel.class);
+                yield AiServices.builder(AiCodeGeneratorService.class)
+                        .streamingChatModel(reasoningStreamingChatModel)
+                        .chatMemoryProvider(memoryId -> chatMemory)
+                        .tools(toolManager.getAllTools())
+                        .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
+                                toolExecutionRequest, "Error: there is no tool called " + toolExecutionRequest.name()
+                        ))
+                        .build();
+            }
+            case HTML, MULTI_FILE -> {
+                // Use prototype-scoped StreamingChatModel to solve concurrency issues
+                StreamingChatModel openAiStreamingChatModel = SpringContextUtil.getBean("streamingChatModelPrototype", StreamingChatModel.class);
+                yield AiServices.builder(AiCodeGeneratorService.class)
+                        .chatModel(chatModel)
+                        .streamingChatModel(openAiStreamingChatModel)
+                        .chatMemory(chatMemory)
+                        .build();
+            }
             default -> throw new BusinessException(ErrorCode.SYSTEM_ERROR,
                     "Unsupported code generation type: " + codeGenType.getValue());
-
         };
     }
 

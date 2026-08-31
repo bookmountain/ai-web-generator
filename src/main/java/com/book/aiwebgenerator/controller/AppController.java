@@ -16,6 +16,8 @@ import com.book.aiwebgenerator.model.dto.app.*;
 import com.book.aiwebgenerator.model.entity.App;
 import com.book.aiwebgenerator.model.entity.User;
 import com.book.aiwebgenerator.model.vo.AppVO;
+import com.book.aiwebgenerator.ratelimiter.RateLimit;
+import com.book.aiwebgenerator.ratelimiter.enums.RateLimitType;
 import com.book.aiwebgenerator.service.AppService;
 import com.book.aiwebgenerator.service.ProjectDownloadService;
 import com.book.aiwebgenerator.service.UserService;
@@ -52,6 +54,7 @@ public class AppController {
     private ProjectDownloadService projectDownloadService;
 
     @GetMapping(value = "/chat/gen/code", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @RateLimit(limitType = RateLimitType.USER, rate = 5, rateInterval = 60, message = "AI conversation requests are too frequent, please try again later")
     public Flux<ServerSentEvent<String>> chatToGenCode(@RequestParam Long appId, @RequestParam String message, HttpServletRequest request) {
         ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR, "app id is invalid");
         ThrowUtils.throwIf(StrUtil.isBlank(message), ErrorCode.PARAMS_ERROR, "message cannot be blank");

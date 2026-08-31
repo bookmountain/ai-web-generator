@@ -11,8 +11,9 @@ public enum ErrorCode {
     NO_AUTH_ERROR(40101, "Unauthorized"),
     NOT_FOUND_ERROR(40400, "Not Found"),
     FORBIDDEN_ERROR(40300, "Forbidden"),
+    TOO_MANY_REQUEST(42900, "Too many requests"),
     SYSTEM_ERROR(50000, "System Error"),
-    OPERATION_ERROR(50001, "Operation Error"),;
+    OPERATION_ERROR(50001, "Operation Error");
 
     private final int code;
 

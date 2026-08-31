@@ -496,6 +496,29 @@ const generateCode = async (userMessage: string, aiMessageIndex: number) => {
       }, 1000)
     })
 
+    // Handle business-error events (backend rate limiting and other exceptions)
+    eventSource.addEventListener("business-error", function (event: MessageEvent) {
+      if (streamCompleted) return
+
+      try {
+        const errorData = JSON.parse(event.data)
+        console.error("SSE business error event:", errorData)
+
+        // Display specific error message
+        const errorMessage = errorData.message || "An error occurred during generation"
+        messages.value[aiMessageIndex].content = `❌ ${errorMessage}`
+        messages.value[aiMessageIndex].loading = false
+        message.error(errorMessage)
+
+        streamCompleted = true
+        isGenerating.value = false
+        eventSource?.close()
+      } catch (parseError) {
+        console.error("Failed to parse error event:", parseError, "Raw data:", event.data)
+        handleError(new Error("Server returned an error"), aiMessageIndex)
+      }
+    })
+
     eventSource.onerror = function () {
       if (streamCompleted || !isGenerating.value) return
       if (eventSource?.readyState === EventSource.CONNECTING) {

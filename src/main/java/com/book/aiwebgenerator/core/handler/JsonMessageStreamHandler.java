@@ -1,14 +1,11 @@
 package com.book.aiwebgenerator.core.handler;
 
-import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.book.aiwebgenerator.ai.model.message.*;
 import com.book.aiwebgenerator.ai.tools.BaseTool;
 import com.book.aiwebgenerator.ai.tools.ToolManager;
-import com.book.aiwebgenerator.constant.AppConstant;
-import com.book.aiwebgenerator.core.builder.VueProjectBuilder;
 import com.book.aiwebgenerator.model.entity.User;
 import com.book.aiwebgenerator.model.enums.ChatHistoryMessageTypeEnum;
 import com.book.aiwebgenerator.service.ChatHistoryService;
@@ -27,10 +24,6 @@ import java.util.Set;
 @Slf4j
 @Component
 public class JsonMessageStreamHandler {
-
-    @Resource
-    private VueProjectBuilder vueProjectBuilder;
-
     @Resource
     private ToolManager toolManager;
 
@@ -61,8 +54,6 @@ public class JsonMessageStreamHandler {
                     // After the streaming response completes, add the AI message to chat history
                     String aiResponse = chatHistoryStringBuilder.toString();
                     chatHistoryService.addChatMessage(appId, aiResponse, ChatHistoryMessageTypeEnum.AI.getValue(), loginUser.getId());
-                    String projectPath = AppConstant.CODE_OUTPUT_ROOT_DIR + "/vue_project_" + appId;
-                    vueProjectBuilder.buildProjectAsync(projectPath);
                 })
                 .doOnError(error -> {
                     // If the AI reply fails, also record an error message

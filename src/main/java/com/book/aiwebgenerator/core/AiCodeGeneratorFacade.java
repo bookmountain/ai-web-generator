@@ -8,6 +8,8 @@ import com.book.aiwebgenerator.ai.model.MultiFileCodeResult;
 import com.book.aiwebgenerator.ai.model.message.AiResponseMessage;
 import com.book.aiwebgenerator.ai.model.message.ToolExecutedMessage;
 import com.book.aiwebgenerator.ai.model.message.ToolRequestMessage;
+import com.book.aiwebgenerator.constant.AppConstant;
+import com.book.aiwebgenerator.core.builder.VueProjectBuilder;
 import com.book.aiwebgenerator.core.parser.CodeParserExecutor;
 import com.book.aiwebgenerator.core.saver.CodeFileSaverExecutor;
 import com.book.aiwebgenerator.exception.BusinessException;
@@ -28,6 +30,9 @@ import java.io.File;
 public class AiCodeGeneratorFacade {
     @Resource
     private AiCodeGeneratorServiceFactory aiCodeGeneratorServiceFactory;
+
+    @Resource
+    private VueProjectBuilder vueProjectBuilder;
 
     public File generateAndSaveCode(String userMessage, CodeGenTypeEnum codeGenTypeEnum, Long appId) {
         if (codeGenTypeEnum == null) {
@@ -67,7 +72,7 @@ public class AiCodeGeneratorFacade {
             }
             case VUE_PROJECT -> {
                 TokenStream tokenStream = aiCodeGeneratorService.generateVueProjectCodeStream(appId, userMessage);
-                yield processTokenStream(tokenStream);
+                yield processTokenStream(tokenStream, appId);
             }
             default -> {
                 String errorMessage = "Unsupported generate type：" + codeGenTypeEnum.getValue();
@@ -76,7 +81,7 @@ public class AiCodeGeneratorFacade {
         };
     }
 
-    private Flux<String> processTokenStream(TokenStream tokenStream) {
+    private Flux<String> processTokenStream(TokenStream tokenStream, Long appId) {
         return Flux.create(sink -> {
             tokenStream.onPartialResponse((String partialResponse) -> {
                         AiResponseMessage aiResponseMessage = new AiResponseMessage(partialResponse);
@@ -91,6 +96,9 @@ public class AiCodeGeneratorFacade {
                         sink.next(JSONUtil.toJsonStr(toolExecutedMessage));
                     })
                     .onCompleteResponse((ChatResponse response) -> {
+                        // Execute Vue project build (synchronous execution to ensure the project is ready for preview)
+                        String projectPath = AppConstant.CODE_OUTPUT_ROOT_DIR + File.separator + "vue_project_" + appId;
+                        vueProjectBuilder.buildProject(projectPath);
                         sink.complete();
                     })
                     .onError((Throwable error) -> {

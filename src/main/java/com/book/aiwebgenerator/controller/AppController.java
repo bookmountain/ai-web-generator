@@ -15,7 +15,6 @@ import com.book.aiwebgenerator.exception.ThrowUtils;
 import com.book.aiwebgenerator.model.dto.app.*;
 import com.book.aiwebgenerator.model.entity.App;
 import com.book.aiwebgenerator.model.entity.User;
-import com.book.aiwebgenerator.model.enums.CodeGenTypeEnum;
 import com.book.aiwebgenerator.model.vo.AppVO;
 import com.book.aiwebgenerator.service.AppService;
 import com.book.aiwebgenerator.service.ProjectDownloadService;
@@ -26,6 +25,7 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.jspecify.annotations.NonNull;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
@@ -190,6 +190,11 @@ public class AppController {
 
 
     @PostMapping("/good/list/page/vo")
+    @Cacheable(
+            value = "good_app_page",
+            key = "T(com.book.aiwebgenerator.utils.CacheKeyUtils).generateKey(#appQueryRequest)",
+            condition = "#appQueryRequest.pageNum <= 10"
+    )
     public BaseResponse<Page<AppVO>> listGoodAppVOByPage(@RequestBody AppQueryRequest appQueryRequest) {
         ThrowUtils.throwIf(appQueryRequest == null, ErrorCode.PARAMS_ERROR);
         long pageSize = appQueryRequest.getPageSize();

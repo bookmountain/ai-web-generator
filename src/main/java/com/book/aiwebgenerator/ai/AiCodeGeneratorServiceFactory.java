@@ -1,5 +1,6 @@
 package com.book.aiwebgenerator.ai;
 
+import com.book.aiwebgenerator.ai.guardrail.PromptSafetyInputGuardrail;
 import com.book.aiwebgenerator.ai.tools.ToolManager;
 import com.book.aiwebgenerator.exception.BusinessException;
 import com.book.aiwebgenerator.exception.ErrorCode;
@@ -80,6 +81,9 @@ public class AiCodeGeneratorServiceFactory {
                         .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
                                 toolExecutionRequest, "Error: there is no tool called " + toolExecutionRequest.name()
                         ))
+                        .maxSequentialToolsInvocations(20)
+                        .inputGuardrails(new PromptSafetyInputGuardrail())
+//                        .outputGuardrails(new RetryOutputGuardrail())
                         .build();
             }
             case HTML, MULTI_FILE -> {
@@ -89,6 +93,8 @@ public class AiCodeGeneratorServiceFactory {
                         .chatModel(chatModel)
                         .streamingChatModel(openAiStreamingChatModel)
                         .chatMemory(chatMemory)
+                        .inputGuardrails(new PromptSafetyInputGuardrail())
+//                        .outputGuardrails(new RetryOutputGuardrail())
                         .build();
             }
             default -> throw new BusinessException(ErrorCode.SYSTEM_ERROR,

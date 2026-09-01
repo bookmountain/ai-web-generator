@@ -31,6 +31,7 @@ import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
@@ -46,6 +47,9 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppService {
+    @Value("${app.deploy-base-url:http://localhost}")
+    private String deployBaseUrl;
+
     @Resource
     private UserService userService;
 
@@ -228,7 +232,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         boolean updateResult = this.updateById(updatedApp);
         ThrowUtils.throwIf(!updateResult, ErrorCode.OPERATION_ERROR, "Failed to update application deployment info");
         // 10. Return an accessible URL
-        String appDeployUrl = String.format("%s/%s/", AppConstant.CODE_DEPLOY_HOST, deployKey);
+        String appDeployUrl = String.format("%s/%s/", deployBaseUrl.replaceAll("/+$", ""), deployKey);
         // 11. Generate screenshot asynchronously
         generateAppScreenshotAsync(appId, appDeployUrl);
 

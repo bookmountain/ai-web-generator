@@ -1,0 +1,82 @@
+name: CI and deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Build frontend
+        working-directory: client
+        env:
+          VITE_API_BASE_URL: /api
+          VITE_DEPLOY_DOMAIN: https://ai-web-generator.bookmountain.work
+        run: |
+          npm ci
+          npm run build
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Build backend
+        run: ./mvnw -B -DskipTests package
+
+  deploy:
+    needs: verify
+    runs-on: [self-hosted, linux, x64, ai-web-generator]
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: https://ai-web-generator.bookmountain.work
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Sync release to VPS
+        run: |
+          rsync -az --delete \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude '.env' \
+            --exclude 'config/application-local.yml' \
+            --exclude 'tmp/' \
+            ./ /opt/ai-web-generator/
+
+      - name: Deploy and verify
+        run: |
+          set -eu
+          cd /opt/ai-web-generator
+          docker compose up -d --build --remove-orphans
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3083/_health >/dev/null; then
+              exit 0
+            fi
+            sleep 5
+          done
+          docker compose ps
+          docker compose logs --tail=100
+          exit 1

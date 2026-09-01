@@ -1,0 +1,13 @@
+.git
+.github
+.idea
+.understand-anything
+client/node_modules
+client/dist
+target
+tmp
+tools/mermaid/node
+tools/mermaid/node_modules
+src/main/resources/application-local.yml
+config/application-local.yml
+*.log

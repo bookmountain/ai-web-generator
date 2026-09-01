@@ -1,0 +1,98 @@
+name: ai-web-generator
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./sql/create_table.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  redis:
+    image: redis:8.2-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      target: backend-runtime
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: local,prod
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      SERVER_SERVLET_SESSION_COOKIE_SECURE: "true"
+      SERVER_SERVLET_SESSION_COOKIE_SAME_SITE: lax
+      APP_DEPLOY_BASE_URL: https://ai-web-generator.bookmountain.work
+      LANGCHAIN4J_OPEN_AI_CHAT_MODEL_LOG_REQUESTS: "false"
+      LANGCHAIN4J_OPEN_AI_CHAT_MODEL_LOG_RESPONSES: "false"
+      LANGCHAIN4J_OPEN_AI_STREAMING_CHAT_MODEL_LOG_REQUESTS: "false"
+      LANGCHAIN4J_OPEN_AI_STREAMING_CHAT_MODEL_LOG_RESPONSES: "false"
+    volumes:
+      - app_data:/app/tmp
+      - ./config/application-local.yml:/app/config/application-local.yml:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8123/api/health/"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 90s
+
+  web:
+    build:
+      context: .
+      target: frontend-runtime
+      args:
+        VITE_API_BASE_URL: /api
+        VITE_DEPLOY_DOMAIN: https://ai-web-generator.bookmountain.work
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3083:80"
+    volumes:
+      - app_data:/data:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/_health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mysql_data:
+  redis_data:
+  app_data:

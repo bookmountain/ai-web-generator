@@ -1,0 +1,33 @@
+spring:
+  datasource:
+    url: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:ai_web_generator}?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
+    username: ${MYSQL_USER:ai_web_generator}
+    password: ${MYSQL_PASSWORD}
+  data:
+    redis:
+      host: redis
+      port: 6379
+      password: ${REDIS_PASSWORD}
+  session:
+    redis:
+      flush-mode: on-save
+
+server:
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        secure: true
+        same-site: lax
+
+langchain4j:
+  open-ai:
+    chat-model:
+      log-requests: false
+      log-responses: false
+    streaming-chat-model:
+      log-requests: false
+      log-responses: false
+
+app:
+  deploy-base-url: https://ai-web-generator.bookmountain.work

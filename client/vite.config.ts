@@ -12,6 +12,9 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
+  build: {
+    assetsDir: "app-assets",
+  },
   server: {
     proxy: {
       "/api": {

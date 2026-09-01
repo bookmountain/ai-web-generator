@@ -1,8 +1,8 @@
+package com.book.aiwebgenerator.exception;
+
 import cn.hutool.json.JSONUtil;
 import com.book.aiwebgenerator.common.BaseResponse;
 import com.book.aiwebgenerator.common.ResultUtils;
-import com.book.aiwebgenerator.exception.BusinessException;
-import com.book.aiwebgenerator.exception.ErrorCode;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

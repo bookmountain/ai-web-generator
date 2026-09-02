@@ -5,7 +5,7 @@
       <a-col flex="200px">
         <RouterLink to="/">
           <div class="header-left">
-            <img class="logo" src="@/assets/logo.jpg" alt="Logo" />
+            <img class="logo" src="@/assets/logo.png" alt="AI Web Generator logo" />
             <h1 class="site-title">AI App</h1>
           </div>
         </RouterLink>

@@ -64,12 +64,12 @@ jobs:
             --exclude '.env' \
             --exclude 'config/application-local.yml' \
             --exclude 'tmp/' \
-            ./ /opt/ai-web-generator/
+            ./ /work/ai-web-generator/
 
       - name: Deploy and verify
         run: |
           set -eu
-          cd /opt/ai-web-generator
+          cd /work/ai-web-generator
           show_diagnostics() {
             docker compose ps
             docker compose logs --tail=100

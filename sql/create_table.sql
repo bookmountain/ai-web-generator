@@ -44,7 +44,7 @@ create table app
 create table chat_history
 (
     id          bigint auto_increment comment 'id' primary key,
-    message     text                               not null comment 'message',
+    message     mediumtext                         not null comment 'message',
     messageType varchar(32)                        not null comment 'user/ai',
     appId       bigint                             not null comment 'app id',
     userId      bigint                             not null comment 'creator user id',
@@ -55,4 +55,3 @@ create table chat_history
     INDEX idx_createTime (createTime),             -- improve query performance by time
     INDEX idx_appId_createTime (appId, createTime) -- core index for cursor pagination
 ) comment 'chat history' collate = utf8mb4_unicode_ci;
-

@@ -31,3 +31,5 @@ langchain4j:
 
 app:
   deploy-base-url: https://ai-web-generator.bookmountain.work
+
+

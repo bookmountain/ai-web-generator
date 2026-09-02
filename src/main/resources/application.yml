@@ -85,3 +85,12 @@ r2:
 
 pexels:
   api-key: <YOUR-API-KEY>
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: always

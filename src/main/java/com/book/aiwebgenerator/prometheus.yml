@@ -1,0 +1,30 @@
+# Prometheus Configuration File
+global:
+  scrape_interval: 15s      # Global scrape interval
+  evaluation_interval: 15s  # Rule evaluation interval
+
+# Alerting manager configuration (optional)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+# Rule files configuration
+rule_files:
+# - "alert_rules.yml"  # Additional alert rules can be added here
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: [ 'localhost:9090' ]
+
+  # Spring Boot application monitoring
+  - job_name: 'ai-web-generator'
+    metrics_path: '/api/actuator/prometheus'  # Spring Boot Actuator endpoint
+    static_configs:
+      - targets: [ 'localhost:8123' ]  # Application server address
+    scrape_interval: 10s  # Scrape every 10 seconds
+    scrape_timeout: 10s   # Scrape timeout duration

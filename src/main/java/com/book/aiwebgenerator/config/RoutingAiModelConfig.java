@@ -1,7 +1,9 @@
 package com.book.aiwebgenerator.config;
 
+import dev.langchain4j.http.client.HttpClientBuilder;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
+import jakarta.annotation.Resource;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -12,6 +14,9 @@ import org.springframework.context.annotation.Scope;
 @ConfigurationProperties(prefix = "langchain4j.open-ai.routing-chat-model")
 @Data
 public class RoutingAiModelConfig {
+
+    @Resource(name = "openAiChatModelHttpClientBuilder")
+    private HttpClientBuilder httpClientBuilder;
 
     private String baseUrl;
 
@@ -34,6 +39,7 @@ public class RoutingAiModelConfig {
     @Scope("prototype")
     public ChatModel routingChatModelPrototype() {
         return OpenAiChatModel.builder()
+                .httpClientBuilder(httpClientBuilder)
                 .apiKey(apiKey)
                 .modelName(modelName)
                 .baseUrl(baseUrl)

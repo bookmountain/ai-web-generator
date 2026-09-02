@@ -1,0 +1,2 @@
+ALTER TABLE chat_history
+    MODIFY COLUMN message MEDIUMTEXT NOT NULL COMMENT 'message';
